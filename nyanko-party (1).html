@@ -1,0 +1,1690 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>NYANKO PARTY</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.60.0/phaser.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#1a1a2e;--panel:#0d0d1a;--border:#fff;
+  --c1:#FF6B6B;--c2:#FFE66D;--c3:#4ECDC4;--c4:#45B7D1;
+  --c5:#96CEB4;--c6:#FF8B94;--c7:#A8E6CF;--c8:#DDA0DD;
+  --white:#f0f0f0;--dim:rgba(255,255,255,0.15);
+}
+html,body{width:100%;height:100%;background:var(--bg);overflow:hidden;font-family:'Press Start 2P',monospace}
+
+/* ===== SCREENS ===== */
+.screen{position:fixed;inset:0;z-index:100;display:none;flex-direction:column;align-items:center;justify-content:center;background:var(--bg);gap:10px;padding:16px}
+.screen.active{display:flex}
+
+/* ===== BUTTONS ===== */
+.btn{font-family:'Press Start 2P',monospace;font-size:clamp(7px,1.4vw,11px);padding:10px 20px;border:3px solid var(--white);cursor:pointer;text-transform:uppercase;letter-spacing:1px;min-width:200px;transition:transform .1s;background:transparent;color:var(--white)}
+.btn:hover{transform:translate(-2px,-2px);background:rgba(255,255,255,.08)}
+.btn:active{transform:none}
+.btn.primary{background:var(--c1);border-color:var(--white)}
+.btn.yellow{background:var(--c2);color:#000;border-color:#000}
+.btn.teal{background:var(--c3);color:#000;border-color:#000}
+.btn.danger{background:#c0392b}
+.btn.sm{min-width:0;font-size:7px;padding:7px 12px}
+
+/* ===== INPUTS ===== */
+.px-input{font-family:'Press Start 2P',monospace;font-size:9px;padding:8px 10px;background:rgba(0,0,0,.4);border:2px solid rgba(255,255,255,.3);color:var(--white);outline:none;width:100%}
+.px-input:focus{border-color:var(--c2)}
+.px-input::placeholder{color:rgba(255,255,255,.3);font-size:8px}
+
+/* ===== PANEL ===== */
+.panel{background:var(--panel);border:3px solid var(--white);padding:20px;width:min(420px,95vw);display:flex;flex-direction:column;gap:10px}
+.panel-title{font-size:clamp(9px,2vw,14px);color:var(--c2);text-align:center;margin-bottom:4px;border-bottom:2px solid rgba(255,255,255,.1);padding-bottom:8px}
+.label{font-size:7px;color:var(--c3);margin-bottom:4px}
+.divider{border:none;border-top:1px solid rgba(255,255,255,.1);margin:4px 0}
+
+/* ===== LOGO ===== */
+.logo{font-size:clamp(18px,5vw,42px);color:var(--c2);letter-spacing:3px;text-shadow:3px 3px 0 var(--c1)}
+.logo-sub{font-size:clamp(7px,1.5vw,11px);color:var(--c3);letter-spacing:2px;margin-bottom:8px}
+
+/* ===== LOBBY ===== */
+.lobby-code{font-size:clamp(22px,5vw,38px);color:var(--c3);text-align:center;letter-spacing:10px;padding:10px;background:rgba(0,0,0,.4);border:2px dashed var(--c3)}
+.lobby-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.lobby-slot{aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border:2px dashed rgba(255,255,255,.2);font-size:7px;color:rgba(255,255,255,.4);gap:3px}
+.lobby-slot.filled{border-style:solid;border-color:rgba(255,255,255,.5);color:var(--white);background:rgba(255,255,255,.04)}
+.slot-name{font-size:6px;max-width:56px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center}
+.badge{font-size:5px;padding:2px 4px;background:var(--c1);color:var(--white)}
+.badge.bot{background:var(--c3);color:#000}
+
+/* ===== COSMETICS ===== */
+.cosm-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;max-height:180px;overflow-y:auto}
+.cosm-item{aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border:2px solid rgba(255,255,255,.2);cursor:pointer;gap:3px;padding:5px;font-size:7px;color:rgba(255,255,255,.6);transition:transform .1s}
+.cosm-item:hover{transform:scale(1.08);border-color:var(--c2)}
+.cosm-item.selected{border-color:var(--c2);background:rgba(255,230,109,.1)}
+.cosm-icon{font-size:20px;line-height:1}
+
+/* ===== LEVEL SELECT ===== */
+#level-select{background:var(--bg)}
+.world-title{font-size:clamp(10px,2.5vw,18px);color:var(--c2);letter-spacing:3px;margin-bottom:4px}
+.world-sub{font-size:8px;color:var(--c3);margin-bottom:16px}
+.levels-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;width:min(480px,95vw)}
+.level-card{border:3px solid var(--white);background:var(--panel);padding:14px;cursor:pointer;display:flex;flex-direction:column;gap:6px;transition:transform .1s,background .1s;position:relative}
+.level-card:hover{transform:translate(-2px,-2px);background:rgba(255,255,255,.06)}
+.level-card.locked{opacity:.4;cursor:not-allowed;border-color:rgba(255,255,255,.3)}
+.level-card.selected{border-color:var(--c2);background:rgba(255,230,109,.08)}
+.level-num{font-size:clamp(7px,1.5vw,10px);color:var(--c3)}
+.level-name{font-size:clamp(8px,1.8vw,11px);color:var(--white)}
+.level-desc{font-size:6px;color:rgba(255,255,255,.5);line-height:1.6}
+.level-icon{font-size:24px;margin-bottom:2px}
+.world-row{display:flex;gap:12px;width:min(480px,95vw);margin-top:8px}
+.world-card{border:3px solid rgba(255,255,255,.2);background:var(--panel);padding:12px;flex:1;text-align:center;font-size:8px;color:rgba(255,255,255,.3)}
+.world-card-title{font-size:9px;color:rgba(255,255,255,.3);margin-bottom:4px}
+.select-footer{display:flex;gap:8px;width:min(480px,95vw);margin-top:8px}
+
+/* ===== HUD ===== */
+#hud{position:fixed;top:0;left:0;right:0;z-index:50;display:none;background:rgba(0,0,0,.75);border-bottom:2px solid rgba(255,255,255,.2);padding:6px 12px;flex-direction:row;align-items:center;gap:10px;flex-wrap:wrap}
+.hud-level{font-size:clamp(8px,1.8vw,12px);color:var(--c2)}
+.hud-players{display:flex;gap:6px;flex:1;flex-wrap:wrap}
+.hud-p{display:flex;align-items:center;gap:5px;font-size:7px;color:var(--white)}
+.hud-dot{width:10px;height:10px;border:2px solid rgba(255,255,255,.5)}
+.hud-timer{font-size:clamp(10px,2vw,14px);color:var(--c2)}
+.hud-attempts{font-size:7px;color:var(--c1)}
+
+/* ===== RESULT ===== */
+#result-screen{background:rgba(0,0,0,.92)}
+.result-box{background:var(--panel);border:3px solid var(--c2);padding:20px;width:min(480px,95vw);display:flex;flex-direction:column;gap:8px}
+.result-title{font-size:clamp(11px,3vw,20px);color:var(--c2);text-align:center}
+.result-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.08);font-size:7px;color:var(--white)}
+.result-val{color:var(--c3)}.result-val.bad{color:var(--c1)}
+
+/* ===== MOBILE ===== */
+#mobile-btns{position:fixed;bottom:0;left:0;right:0;display:none;background:rgba(0,0,0,.85);border-top:2px solid rgba(255,255,255,.2);padding:10px 16px;gap:12px;justify-content:space-between;align-items:center;z-index:55}
+@media(max-width:768px){#mobile-btns{display:flex}}
+.mob-btn{font-family:'Press Start 2P',monospace;font-size:16px;padding:14px 22px;background:rgba(255,255,255,.08);border:2px solid rgba(255,255,255,.35);color:var(--white);cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent}
+.mob-btn:active{background:rgba(255,255,255,.25)}
+
+/* ===== TOAST ===== */
+#toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--panel);border:2px solid var(--c2);color:var(--c2);font-family:'Press Start 2P',monospace;font-size:8px;padding:8px 16px;z-index:999;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap;max-width:90vw;overflow:hidden;text-overflow:ellipsis}
+#toast.show{opacity:1}
+
+/* ===== TRANSITION ===== */
+#transition-overlay{position:fixed;inset:0;background:#000;z-index:200;display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px}
+#transition-overlay.active{display:flex}
+.tr-num{font-size:clamp(32px,8vw,64px);color:var(--c2)}
+.tr-name{font-size:clamp(10px,2.5vw,18px);color:var(--white);letter-spacing:3px}
+
+/* ===== ANIMS ===== */
+@keyframes bounce{0%{transform:translateY(0)}100%{transform:translateY(-6px)}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.bounce{animation:bounce .8s ease-in-out infinite alternate}
+.blink{animation:blink 1s infinite}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen" class="screen active">
+  <div class="logo">NYANKO</div>
+  <div class="logo-sub">PARTY ONLINE</div>
+  <div style="display:flex;gap:12px;margin:4px 0;font-size:22px">
+    <span class="bounce" style="animation-delay:0s">^-^</span>
+    <span class="bounce" style="animation-delay:.2s">^-^</span>
+    <span class="bounce" style="animation-delay:.4s">^-^</span>
+  </div>
+  <div class="panel" style="max-width:320px">
+    <div class="panel-title">INICIAR SESION</div>
+    <div><div class="label">USUARIO</div><input class="px-input" id="login-user" placeholder="admin" value="admin"></div>
+    <div><div class="label">CONTRASENA</div><input class="px-input" id="login-pass" type="password" placeholder="admin123" value="admin123"></div>
+    <button class="btn primary" id="btn-login">► ENTRAR</button>
+    <button class="btn sm" id="btn-register-show" style="min-width:0">+ CREAR CUENTA</button>
+    <div style="font-size:6px;color:rgba(255,255,255,.3);text-align:center">DEMO: admin / admin123</div>
+  </div>
+</div>
+
+<!-- MAIN MENU -->
+<div id="main-menu" class="screen">
+  <div class="logo">NYANKO PARTY</div>
+  <div class="logo-sub">COOPERATIVE PUZZLE GAME</div>
+  <div id="welcome-msg" style="font-size:8px;color:var(--c3);margin:4px 0"></div>
+  <button class="btn primary" id="btn-create-room">► CREAR SALA</button>
+  <button class="btn teal" id="btn-join-room">► UNIRSE A SALA</button>
+  <button class="btn yellow" id="btn-solo">⚡ JUGAR SOLO (BOTS)</button>
+  <button class="btn" id="btn-cosmetics">★ PERSONALIZAR</button>
+  <button class="btn sm" id="btn-stats" style="min-width:0">ESTADISTICAS</button>
+  <div style="font-size:6px;color:rgba(255,255,255,.25);margin-top:8px;text-align:center">ABRE MULTIPLES PESTANAS PARA MULTIPLAYER</div>
+</div>
+
+<!-- ROOM LOBBY -->
+<div id="room-lobby" class="screen">
+  <div class="panel">
+    <div class="panel-title" id="lobby-title">SALA DE ESPERA</div>
+    <div class="lobby-code" id="lobby-code">----</div>
+    <div style="font-size:6px;color:rgba(255,255,255,.4);text-align:center">COMPARTE ESTE CODIGO</div>
+    <div class="lobby-grid" id="lobby-players"></div>
+    <div class="divider"></div>
+    <div id="lobby-join-row" style="display:none">
+      <div class="label">CODIGO DE SALA</div>
+      <div style="display:flex;gap:6px">
+        <input class="px-input" id="room-code-input" placeholder="XXXX" maxlength="4" style="text-transform:uppercase;letter-spacing:4px;font-size:14px;flex:1">
+        <button class="btn teal sm" id="btn-do-join">OK</button>
+      </div>
+    </div>
+    <button class="btn primary" id="btn-start-game" style="display:none">► ELEGIR NIVEL</button>
+    <button class="btn sm" id="btn-add-bot" style="min-width:0">+ BOT</button>
+    <button class="btn danger sm" id="btn-leave-room" style="min-width:0">✕ SALIR</button>
+  </div>
+</div>
+
+<!-- LEVEL SELECT -->
+<div id="level-select" class="screen">
+  <div class="world-title">★ HELLO PICO PARK</div>
+  <div class="world-sub">MUNDO 1 — SELECCIONA UN NIVEL</div>
+  <div class="levels-grid" id="levels-grid"></div>
+  <div class="world-row">
+    <div class="world-card"><div class="world-card-title">MUNDO 2</div>COMING SOON</div>
+    <div class="world-card"><div class="world-card-title">MUNDO 3</div>COMING SOON</div>
+    <div class="world-card"><div class="world-card-title">MUNDO 4</div>COMING SOON</div>
+  </div>
+  <div class="select-footer">
+    <button class="btn sm" id="btn-back-select" style="flex:1">← VOLVER</button>
+    <button class="btn yellow sm" id="btn-launch-level" style="flex:1;display:none">► INICIAR</button>
+  </div>
+  <div id="select-status" style="font-size:7px;color:rgba(255,255,255,.4);text-align:center"></div>
+</div>
+
+<!-- COSMETICS -->
+<div id="cosmetics-screen" class="screen">
+  <div class="panel" style="max-width:380px">
+    <div class="panel-title">PERSONALIZAR GATITO</div>
+    <div style="display:flex;gap:14px;align-items:center;justify-content:center">
+      <div style="text-align:center">
+        <div id="preview-cat-canvas" style="width:64px;height:64px;border:3px solid var(--c2);background:#000;margin:0 auto"></div>
+        <div style="font-size:7px;color:var(--c3);margin-top:6px" id="preview-name">GATITO</div>
+      </div>
+      <div style="flex:1">
+        <div class="label">NOMBRE</div>
+        <input class="px-input" id="cosmetic-name" maxlength="12" placeholder="TU NOMBRE" style="font-size:9px">
+      </div>
+    </div>
+    <div class="label" style="margin-top:8px">SOMBRERO</div>
+    <div class="cosm-grid" id="hat-grid"></div>
+    <div style="display:flex;gap:8px;margin-top:6px">
+      <button class="btn primary sm" id="btn-save-cosm" style="flex:1">✓ GUARDAR</button>
+      <button class="btn sm" id="btn-back-cosm" style="flex:1">← VOLVER</button>
+    </div>
+  </div>
+</div>
+
+<!-- RESULT -->
+<div id="result-screen" class="screen">
+  <div class="result-box">
+    <div class="result-title" id="result-title">NIVEL COMPLETADO!</div>
+    <div id="result-stars" style="text-align:center;font-size:20px;margin:6px 0">★★★</div>
+    <div id="result-rows"></div>
+    <div class="divider"></div>
+    <div class="result-row"><span>TIEMPO</span><span class="result-val" id="result-time">0:00</span></div>
+    <div class="result-row"><span>INTENTOS</span><span class="result-val" id="result-attempts">1</span></div>
+    <div class="result-row"><span>MAYOR DESTROYER</span><span class="result-val bad" id="result-worst">-</span></div>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button class="btn yellow sm" id="btn-play-again" style="flex:1">↺ DE NUEVO</button>
+      <button class="btn sm" id="btn-menu-result" style="flex:1">⌂ MENU</button>
+    </div>
+  </div>
+</div>
+
+<!-- GAME -->
+<div id="game-container" style="display:none;width:100%;height:100vh"></div>
+
+<!-- HUD -->
+<div id="hud">
+  <div class="hud-level" id="hud-level">1-1</div>
+  <div class="hud-players" id="hud-players"></div>
+  <div class="hud-timer" id="hud-timer">0:00</div>
+  <div class="hud-attempts" id="hud-attempts">x1</div>
+</div>
+
+<!-- MOBILE CONTROLS -->
+<div id="mobile-btns">
+  <button class="mob-btn" id="mob-left">◀</button>
+  <button class="mob-btn" id="mob-jump" style="background:rgba(255,230,109,.15)">▲</button>
+  <button class="mob-btn" id="mob-right">▶</button>
+</div>
+
+<!-- TRANSITION -->
+<div id="transition-overlay">
+  <div class="tr-num" id="tr-num">1-1</div>
+  <div class="tr-name" id="tr-name">STACKING</div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ============================================================
+// ACCOUNT MANAGER
+// ============================================================
+const AccountManager = (() => {
+  const CATS_COLORS = ['#FF6B6B','#FFE66D','#4ECDC4','#45B7D1','#96CEB4','#FF8B94','#A8E6CF','#DDA0DD'];
+  const HATS = [
+    {id:'none',icon:'',name:'NINGUNO'},
+    {id:'top',icon:'🎩',name:'TOP'},
+    {id:'crown',icon:'👑',name:'CORONA'},
+    {id:'bow',icon:'🎀',name:'MONO'},
+    {id:'cap',icon:'🧢',name:'GORRA'},
+    {id:'wizard',icon:'🔮',name:'MAGO'},
+    {id:'cowboy',icon:'🤠',name:'VAQUERO'},
+    {id:'flower',icon:'🌸',name:'FLOR'},
+    {id:'party',icon:'🎉',name:'FIESTA'},
+    {id:'santa',icon:'🎅',name:'NOEL'},
+  ];
+  let state = {loggedIn:false,username:'',hat:'none',color:CATS_COLORS[0],stats:{played:0,deaths:0,time:0,wins:0},roomId:null,isHost:false,playerId:null,playerIndex:0};
+
+  function getAccounts(){try{return JSON.parse(localStorage.getItem('nyanko_acc')||'{}')}catch{return{}}}
+  function saveAccounts(a){localStorage.setItem('nyanko_acc',JSON.stringify(a))}
+
+  function init(){
+    const acc=getAccounts();
+    if(!acc.admin){acc.admin={password:'admin123',hat:'crown',color:CATS_COLORS[0],stats:{played:42,deaths:137,time:3600,wins:18}};saveAccounts(acc);}
+  }
+
+  function login(user,pass){
+    const acc=getAccounts();
+    if(acc[user]&&acc[user].password===pass){
+      state.loggedIn=true;state.username=user;state.hat=acc[user].hat||'none';
+      state.color=acc[user].color||CATS_COLORS[0];state.stats=acc[user].stats||{played:0,deaths:0,time:0,wins:0};
+      state.playerId='p_'+user+'_'+Math.random().toString(36).slice(2,6);
+      return true;
+    }
+    return false;
+  }
+
+  function register(user,pass){
+    if(!user||user.length<2)return'Nombre muy corto';
+    if(!pass||pass.length<4)return'Contrasena muy corta';
+    const acc=getAccounts();
+    if(acc[user])return'Usuario ya existe';
+    acc[user]={password:pass,hat:'none',color:CATS_COLORS[Math.floor(Math.random()*CATS_COLORS.length)],stats:{played:0,deaths:0,time:0,wins:0}};
+    saveAccounts(acc);return null;
+  }
+
+  function saveProfile(){
+    const acc=getAccounts();
+    if(acc[state.username]){acc[state.username].hat=state.hat;acc[state.username].color=state.color;acc[state.username].stats=state.stats;saveAccounts(acc);}
+  }
+
+  function makePlayerObj(){
+    return {id:state.playerId,username:state.username,hat:state.hat,color:state.color,isBot:false,isHost:state.isHost,deaths:0,joinedAt:Date.now()};
+  }
+
+  init();
+  return {state,login,register,saveProfile,makePlayerObj,HATS,CATS_COLORS};
+})();
+
+const localState = AccountManager.state;
+const HATS = AccountManager.HATS;
+const COLORS = AccountManager.CATS_COLORS;
+
+// ============================================================
+// AUDIO MANAGER
+// ============================================================
+const AudioManager = (() => {
+  let ctx = null;
+  function getCtx(){if(!ctx)ctx=new(window.AudioContext||window.webkitAudioContext)();return ctx;}
+  function beep(freq,dur,type='square',vol=0.15,detune=0){
+    try{
+      const c=getCtx();const o=c.createOscillator();const g=c.createGain();
+      o.connect(g);g.connect(c.destination);
+      o.type=type;o.frequency.value=freq;o.detune.value=detune;
+      g.gain.setValueAtTime(vol,c.currentTime);g.gain.exponentialRampToValueAtTime(0.001,c.currentTime+dur);
+      o.start(c.currentTime);o.stop(c.currentTime+dur);
+    }catch(e){}
+  }
+  function jump(){beep(300,.05);setTimeout(()=>beep(500,.08),50);}
+  function land(){beep(150,.06,'sawtooth',0.08);}
+  function button(){beep(440,.05);setTimeout(()=>beep(660,.1),60);}
+  function door(){[523,659,784,1047].forEach((f,i)=>setTimeout(()=>beep(f,.12,'square',0.12),i*80));}
+  function death(){beep(300,.05,'sawtooth');setTimeout(()=>beep(200,.1,'sawtooth'),60);setTimeout(()=>beep(100,.2,'sawtooth'),140);}
+  function victory(){const n=[523,659,784,1047,1319];n.forEach((f,i)=>setTimeout(()=>beep(f,.15,'square',0.15),i*100));}
+  function reset(){beep(200,.08,'sawtooth');setTimeout(()=>beep(150,.15,'sawtooth',0.12),90);}
+  return {jump,land,button,door,death,victory,reset};
+})();
+
+// ============================================================
+// ROOM MANAGER
+// ============================================================
+const RoomManager = (() => {
+  let roomState={id:null,players:[],hostId:null,started:false};
+  let roomChannel=null;
+  let onMessage=null;
+
+  function getRooms(){try{return JSON.parse(localStorage.getItem('nyanko_rooms')||'{}')}catch{return{}}}
+  function saveRooms(r){localStorage.setItem('nyanko_rooms',JSON.stringify(r))}
+
+  function createRoom(){
+    const code=(Math.random()*9000+1000|0).toString();
+    const rooms=getRooms();
+    const me=AccountManager.makePlayerObj();me.isHost=true;
+    rooms[code]={id:code,players:[me],hostId:localState.playerId,started:false,created:Date.now(),lastPing:Date.now(),selectedLevel:0};
+    saveRooms(rooms);
+    localState.roomId=code;localState.isHost=true;localState.playerIndex=0;
+    roomState=rooms[code];
+    setupChannel(code);
+    return code;
+  }
+
+  function joinRoom(code){
+    const rooms=getRooms();
+    if(!rooms[code])return'Sala no encontrada';
+    if(rooms[code].started)return'El juego ya empezo';
+    if(rooms[code].players.length>=8)return'Sala llena';
+    const me=AccountManager.makePlayerObj();me.isHost=false;
+    rooms[code].players.push(me);rooms[code].lastPing=Date.now();
+    saveRooms(rooms);
+    localState.roomId=code;localState.isHost=false;localState.playerIndex=rooms[code].players.length-1;
+    roomState=rooms[code];
+    setupChannel(code);
+    return null;
+  }
+
+  function addBot(roomId){
+    const rooms=getRooms();if(!rooms[roomId])return;
+    if(rooms[roomId].players.length>=8)return;
+    const names=['NYA','MOCHI','TAMA','KURO','SHIRO','MARU','NEKO','HIME'];
+    const idx=rooms[roomId].players.filter(p=>p.isBot).length;
+    const bot={id:'bot_'+Date.now(),username:names[idx%names.length],hat:HATS[Math.floor(Math.random()*HATS.length)].id,color:COLORS[(idx+3)%COLORS.length],isBot:true,isHost:false,deaths:0,joinedAt:Date.now()};
+    rooms[roomId].players.push(bot);rooms[roomId].lastPing=Date.now();
+    saveRooms(rooms);roomState=rooms[roomId];
+    broadcast({type:'room_update',room:roomState});
+  }
+
+  function setupChannel(roomId){
+    if(roomChannel)roomChannel.close();
+    try{
+      roomChannel=new BroadcastChannel('nyanko_room_'+roomId);
+      roomChannel.onmessage=e=>{if(onMessage)onMessage(e.data);};
+    }catch(e){}
+  }
+
+  function broadcast(msg){if(roomChannel)roomChannel.postMessage(msg);}
+
+  function broadcastRoomUpdate(){
+    const rooms=getRooms();
+    if(localState.roomId&&rooms[localState.roomId]){rooms[localState.roomId].lastPing=Date.now();saveRooms(rooms);roomState=rooms[localState.roomId];}
+    broadcast({type:'room_update',room:roomState});
+  }
+
+  function broadcastGameStart(levelIdx){
+    const rooms=getRooms();
+    if(localState.roomId&&rooms[localState.roomId]){rooms[localState.roomId].started=true;rooms[localState.roomId].selectedLevel=levelIdx;saveRooms(rooms);roomState=rooms[localState.roomId];}
+    broadcast({type:'game_start',room:roomState,levelIdx});
+  }
+
+  function broadcastGameState(state){broadcast({type:'game_state',state});}
+  function broadcastLevelSelect(idx){broadcast({type:'level_select',idx});}
+  function broadcastLevelReset(){broadcast({type:'level_reset'});}
+  function broadcastLevelNext(idx){broadcast({type:'level_next',idx});}
+  function setOnMessage(fn){onMessage=fn;}
+  function getRoom(){const rooms=getRooms();return localState.roomId?rooms[localState.roomId]:roomState;}
+  function getChannel(){return roomChannel;}
+
+  setInterval(()=>{
+    const rooms=getRooms();const now=Date.now();
+    Object.keys(rooms).forEach(k=>{if(now-rooms[k].lastPing>300000)delete rooms[k];});
+    saveRooms(rooms);
+  },60000);
+
+  return {createRoom,joinRoom,addBot,broadcast,broadcastRoomUpdate,broadcastGameStart,broadcastGameState,broadcastLevelSelect,broadcastLevelReset,broadcastLevelNext,setOnMessage,getRoom,getChannel,get roomState(){return roomState;}};
+})();
+
+// ============================================================
+// UI MANAGER
+// ============================================================
+const UIManager = (() => {
+  const SCREENS=['login-screen','main-menu','room-lobby','level-select','cosmetics-screen','result-screen'];
+  let toastTimer=null;
+
+  function showScreen(id){
+    SCREENS.forEach(s=>{const el=document.getElementById(s);if(el)el.classList.remove('active');});
+    if(id){const el=document.getElementById(id);if(el)el.classList.add('active');}
+  }
+
+  function showToast(msg,dur=2500){
+    const t=document.getElementById('toast');
+    clearTimeout(toastTimer);t.textContent=msg;t.classList.add('show');
+    toastTimer=setTimeout(()=>t.classList.remove('show'),dur);
+  }
+
+  function updateLobbyUI(){
+    const room=RoomManager.getRoom();if(!room)return;
+    document.getElementById('lobby-code').textContent=room.id;
+    document.getElementById('lobby-title').textContent=localState.isHost?'SALA (HOST)':'SALA DE ESPERA';
+    document.getElementById('btn-start-game').style.display=localState.isHost&&room.players.length>=1?'block':'none';
+    const grid=document.getElementById('lobby-players');grid.innerHTML='';
+    for(let i=0;i<8;i++){
+      const slot=document.createElement('div');
+      const p=room.players[i];
+      if(p){
+        slot.className='lobby-slot filled';slot.style.borderColor=p.color;
+        const hat=HATS.find(h=>h.id===p.hat)?.icon||'';
+        slot.innerHTML=`<div style="font-size:18px">${hat||'[=]'}</div><div class="slot-name" style="color:${p.color}">${p.username}</div>${p.isHost?'<div class="badge">HOST</div>':''}${p.isBot?'<div class="badge bot">BOT</div>':''}`;
+      }else{
+        slot.className='lobby-slot';slot.innerHTML='<div style="font-size:16px;opacity:.3">+</div><div>LIBRE</div>';
+      }
+      grid.appendChild(slot);
+    }
+  }
+
+  function buildHatGrid(){
+    const grid=document.getElementById('hat-grid');grid.innerHTML='';
+    HATS.forEach(h=>{
+      const div=document.createElement('div');div.className='cosm-item'+(localState.hat===h.id?' selected':'');
+      div.innerHTML=`<div class="cosm-icon">${h.icon||'--'}</div><div>${h.name}</div>`;
+      div.onclick=()=>{localState.hat=h.id;grid.querySelectorAll('.cosm-item').forEach(el=>el.classList.remove('selected'));div.classList.add('selected');};
+      grid.appendChild(div);
+    });
+  }
+
+  function updateHUD(levelId,attempts){
+    const room=RoomManager.getRoom();if(!room)return;
+    if(levelId!==undefined)document.getElementById('hud-level').textContent=levelId;
+    if(attempts!==undefined)document.getElementById('hud-attempts').textContent='x'+attempts;
+    const hud=document.getElementById('hud-players');hud.innerHTML='';
+    (room.players||[]).forEach(p=>{
+      const div=document.createElement('div');div.className='hud-p';
+      const hat=HATS.find(h=>h.id===p.hat)?.icon||'';
+      div.innerHTML=`<div class="hud-dot" style="background:${p.color}"></div><span style="color:${p.color}">${p.username.slice(0,6)}</span>${hat}`;
+      hud.appendChild(div);
+    });
+  }
+
+  function showTransition(levelNum,levelName,cb){
+    const ov=document.getElementById('transition-overlay');
+    document.getElementById('tr-num').textContent=levelNum;
+    document.getElementById('tr-name').textContent=levelName;
+    ov.classList.add('active');
+    setTimeout(()=>{ov.classList.remove('active');if(cb)cb();},1800);
+  }
+
+  return {showScreen,showToast,updateLobbyUI,buildHatGrid,updateHUD,showTransition};
+})();
+
+// ============================================================
+// LEVEL DEFINITIONS
+// ============================================================
+const LevelManager = (() => {
+  const LEVEL_DEFS = [
+    {
+      id:'1-1',num:'1-1',name:'STACKING',
+      desc:'Apilense para escalar\nel gran muro.',
+      icon:'↑',
+      build(scene,playerCount){return buildLevel11(scene,playerCount);}
+    },
+    {
+      id:'1-2',num:'1-2',name:'PUSHING',
+      desc:'Empujen el bloque\npara crear el puente.',
+      icon:'→',
+      build(scene,playerCount){return buildLevel12(scene,playerCount);}
+    },
+    {
+      id:'1-3',num:'1-3',name:'SPLIT ROLES',
+      desc:'Un jugador arriba,\notro abajo. Coordinen.',
+      icon:'↕',
+      build(scene,playerCount){return buildLevel13(scene,playerCount);}
+    },
+    {
+      id:'1-4',num:'1-4',name:'MOVING DANGER',
+      desc:'Timing cooperativo.\nNo se detengan.',
+      icon:'!',
+      build(scene,playerCount){return buildLevel14(scene,playerCount);}
+    }
+  ];
+
+  let currentLevelIdx = 0;
+  let selectedLevelIdx = 0;
+
+  function getLevels(){return LEVEL_DEFS;}
+  function getCurrent(){return LEVEL_DEFS[currentLevelIdx];}
+  function getSelected(){return LEVEL_DEFS[selectedLevelIdx];}
+  function selectLevel(idx){selectedLevelIdx=idx;}
+  function setCurrentLevel(idx){currentLevelIdx=idx;}
+  function nextLevel(){currentLevelIdx++;return currentLevelIdx<LEVEL_DEFS.length?LEVEL_DEFS[currentLevelIdx]:null;}
+  function hasNext(){return currentLevelIdx<LEVEL_DEFS.length-1;}
+
+  return {getLevels,getCurrent,getSelected,selectLevel,setCurrentLevel,nextLevel,hasNext,get currentIdx(){return currentLevelIdx;},get selectedIdx(){return selectedLevelIdx;}};
+})();
+
+// ============================================================
+// LEVEL BUILDER HELPERS
+// ============================================================
+function makeTile(scene,x,y,w,h,color,alpha=1){
+  const r=scene.add.rectangle(x,y,w,h,color);r.setAlpha(alpha);
+  scene.physics.add.existing(r,true);
+  return r;
+}
+
+function makeSign(scene,x,y,text,color='#FFE66D'){
+  return scene.add.text(x,y,text,{fontFamily:'monospace',fontSize:'8px',color,backgroundColor:'rgba(0,0,0,.7)',padding:{x:4,y:2}}).setOrigin(.5);
+}
+
+// ===== LEVEL 1-1: STACKING =====
+function buildLevel11(scene,pc){
+  const W=1800,H=600;
+  scene.worldW=W;scene.worldH=H;
+  scene.cameras.main.setBounds(0,0,W,H);
+  scene.physics.world.setBounds(0,0,W,H);
+  scene.add.rectangle(W/2,H/2,W,H,0x111122);
+  drawGrid(scene,W,H);
+
+  const plats=scene.physics.add.staticGroup();
+  const rects=[];
+
+  // Floor sections
+  addPlatGroup(plats,rects,scene,[
+    [0,H-20,400,20,0x3355aa],        // left floor
+    [500,H-20,W-500,20,0x3355aa],    // right floor
+    [0,0,12,H,0x223366],             // left wall
+    [W-12,0,12,H,0x223366],          // right wall
+  ]);
+
+  // The big wall (must stack to get over)
+  const wallX=420;
+  addPlatGroup(plats,rects,scene,[
+    [wallX,H-180,24,180,0x884422],   // wall itself
+  ]);
+  makeSign(scene,wallX,H-200,'MURO','#FF8866');
+
+  // Button platform (high up, reachable after stacking)
+  addPlatGroup(plats,rects,scene,[
+    [200,H-180,80,12,0x335533],      // mid platform
+    [80,H-300,80,12,0x335533],
+    [wallX+40,H-200,200,12,0x335533],// right of wall, top
+    [wallX+280,H-300,200,12,0x335533],
+    [wallX+520,H-400,120,12,0x335533],
+  ]);
+
+  // Elevator shaft
+  addPlatGroup(plats,rects,scene,[
+    [W-200,H-20,60,200,0x223366],    // elevator left wall
+    [W-80,H-20,60,200,0x223366],     // elevator right wall
+  ]);
+
+  // Button (big yellow)
+  const btnX=wallX+60,btnY=H-220;
+  const button=scene.add.rectangle(btnX,btnY,32,16,0xFFCC00);
+  scene.physics.add.existing(button,true);
+  const btnLabel=makeSign(scene,btnX,btnY-28,'BOTON','#FFE66D');
+  const btnPulse=scene.tweens.add({targets:button,scaleX:1.1,scaleY:1.1,duration:600,yoyo:true,repeat:-1});
+
+  // Extendable platform (starts short)
+  const extPlat=scene.add.rectangle(wallX+100,H-190,10,12,0x44BB44);
+  scene.physics.add.existing(extPlat,true);
+  let extExtended=false;
+
+  scene.levelUpdate=function(){
+    // Check any player on/near button
+    if(!extExtended){
+      scene.playerSprites.forEach(s=>{
+        if(s.isDead)return;
+        if(Math.abs(s.x-btnX)<30&&Math.abs(s.y-btnY)<24){
+          extExtended=true;btnPulse.stop();button.setFillStyle(0x88FF44);
+          btnLabel.setText('✓ ON');
+          scene.tweens.add({targets:extPlat,width:260,x:wallX+230,duration:600,ease:'Power2'});
+          extPlat.body.reset(wallX+230,H-190);
+          extPlat.body.setSize(260,12);
+          AudioManager.button();
+          UIManager.showToast('PLATAFORMA EXTENDIDA!');
+        }
+      });
+    }
+  };
+
+  // Elevator (moving platform vertical)
+  const elev=scene.add.rectangle(W-140,H-80,60,12,0x44AA88);
+  scene.physics.add.existing(elev);elev.body.allowGravity=false;elev.body.immovable=true;
+  scene.elev=elev;scene.elevDir=-1;scene.elevMin=H-300;scene.elevMax=H-80;
+  scene.elevActive=true;
+
+  // Door (top right)
+  const door=makeTile(scene,W-140,80,48,64,0xFF4466);
+  const doorLabel=scene.add.text(W-140,50,'PUERTA',{fontFamily:'monospace',fontSize:'8px',color:'#FF4466'}).setOrigin(.5);
+  scene.door=door;scene.doorLabel=doorLabel;scene.doorOpen=false;
+
+  // Key
+  const key=scene.add.rectangle(W-140,H-350,18,18,0xFFCC00);
+  scene.physics.add.existing(key,false);key.body.allowGravity=true;
+  const keyLabel=makeSign(scene,W-140,H-375,'LLAVE','#FFE66D');
+  scene.key=key;scene.keyLabel=keyLabel;scene.hasKey=false;
+
+  scene.staticPlatforms=plats;
+  scene.extraRects=rects;
+
+  return {spawnX:40,spawnY:H-60,players:pc};
+}
+
+// ===== LEVEL 1-2: PUSHING =====
+function buildLevel12(scene,pc){
+  const W=1800,H=600;
+  scene.worldW=W;scene.worldH=H;
+  scene.cameras.main.setBounds(0,0,W,H);
+  scene.physics.world.setBounds(0,0,W,H);
+  scene.add.rectangle(W/2,H/2,W,H,0x111122);
+  drawGrid(scene,W,H);
+
+  const plats=scene.physics.add.staticGroup();
+  const rects=[];
+
+  addPlatGroup(plats,rects,scene,[
+    [0,H-20,500,20,0x3355aa],
+    [550,H-20,W-1100,20,0x3355aa],  // gap at 500-550 (first pit)
+    [900,H-20,W-1250,20,0x3355aa],  // gap at 850-900 (second pit)
+    [W-400,H-20,400,20,0x3355aa],
+    [0,0,12,H,0x223366],
+    [W-12,0,12,H,0x223366],
+    // Platforms
+    [100,H-120,120,12,0x335533],
+    [600,H-140,80,12,0x335533],
+    [W-300,H-120,120,12,0x335533],
+    [W-200,H-250,80,12,0x335533],
+  ]);
+
+  // Pit labels
+  scene.add.text(525,H-60,'PIT',{fontFamily:'monospace',fontSize:'8px',color:'#FF4466'}).setOrigin(.5);
+  scene.add.text(875,H-60,'PIT',{fontFamily:'monospace',fontSize:'8px',color:'#FF4466'}).setOrigin(.5);
+
+  // Big pushable block
+  const block=scene.physics.add.image(200,H-80,'block_push');
+  block.setDisplaySize(80,80);block.body.allowGravity=true;
+  block.body.mass=10;block.setBounce(0);block.setFriction(1,0);
+  block.setImmovable(false);
+  scene.pushBlock=block;
+
+  makeSign(scene,200,H-130,'EMPUJEN','#FFE66D');
+
+  // Key behind first pit
+  const key=scene.add.rectangle(700,H-60,18,18,0xFFCC00);
+  scene.physics.add.existing(key,false);key.body.allowGravity=true;
+  const keyLabel=makeSign(scene,700,H-85,'LLAVE','#FFE66D');
+  scene.key=key;scene.keyLabel=keyLabel;scene.hasKey=false;
+
+  // Second pushable box
+  const box2=scene.physics.add.image(W-350,H-80,'block_push');
+  box2.setDisplaySize(60,60);box2.body.allowGravity=true;
+  box2.body.mass=6;box2.setBounce(0);box2.setFriction(1,0);
+  scene.pushBox2=box2;
+  makeSign(scene,W-350,H-130,'CAJA','#96CEB4');
+
+  // Door
+  const door=makeTile(scene,W-140,H-280,48,64,0xFF4466);
+  const doorLabel=scene.add.text(W-140,H-320,'PUERTA',{fontFamily:'monospace',fontSize:'8px',color:'#FF4466'}).setOrigin(.5);
+  scene.door=door;scene.doorLabel=doorLabel;scene.doorOpen=false;
+
+  scene.staticPlatforms=plats;scene.extraRects=rects;
+
+  scene.levelUpdate=function(){};
+  return {spawnX:40,spawnY:H-80,players:pc};
+}
+
+// ===== LEVEL 1-3: SPLIT ROLES =====
+function buildLevel13(scene,pc){
+  const W=1800,H=700;
+  scene.worldW=W;scene.worldH=H;
+  scene.cameras.main.setBounds(0,0,W,H);
+  scene.physics.world.setBounds(0,0,W,H);
+  scene.add.rectangle(W/2,H/2,W,H,0x111122);
+  drawGrid(scene,W,H);
+
+  const plats=scene.physics.add.staticGroup();
+  const rects=[];
+
+  // Lower path
+  addPlatGroup(plats,rects,scene,[
+    [0,H-20,600,20,0x3355aa],
+    [700,H-20,500,20,0x3355aa],
+    [1300,H-20,W-1300,20,0x3355aa],
+    [0,0,12,H,0x223366],[W-12,0,12,H,0x223366],
+    // Lower mid platforms
+    [200,H-120,100,12,0x335533],
+    [450,H-200,100,12,0x335533],
+    [600,H-120,80,12,0x996633],  // button platform below
+    [900,H-160,120,12,0x335533],
+    [1100,H-120,80,12,0x335533],
+    [1300,H-200,100,12,0x335533],
+  ]);
+  // Upper path
+  addPlatGroup(plats,rects,scene,[
+    [0,H-300,300,12,0x335588],
+    [400,H-300,200,12,0x335588],
+    [700,H-320,200,12,0x335588],
+    [1000,H-300,200,12,0x335588],
+    [1300,H-320,200,12,0x335588],
+    [W-200,H-300,200,12,0x335588],
+    // Ceiling path
+    [0,H-450,W,12,0x223366],
+  ]);
+
+  scene.add.text(80,H-270,'RUTA SUPERIOR',{fontFamily:'monospace',fontSize:'7px',color:'#4488FF'}).setOrigin(0,.5);
+  scene.add.text(80,H-120,'RUTA INFERIOR',{fontFamily:'monospace',fontSize:'7px',color:'#44BB44'}).setOrigin(0,.5);
+
+  // Switch A (upper route, activates lower platform)
+  const swA=scene.add.rectangle(500,H-320,24,16,0xBB2222);
+  scene.physics.add.existing(swA,true);swA.isOn=false;
+  const swALabel=makeSign(scene,500,H-345,'A','#FF6666');
+
+  // Switch B (lower route, activates upper bridge)
+  const swB=scene.add.rectangle(640,H-140,24,16,0xBB2222);
+  scene.physics.add.existing(swB,true);swB.isOn=false;
+  const swBLabel=makeSign(scene,640,H-165,'B','#FF6666');
+
+  scene.switches=[swA,swB];
+
+  // Moveable platform A (unlocked by swA)
+  const movPlatA=scene.add.rectangle(850,H-200,80,12,0x884422,0.3);
+  scene.physics.add.existing(movPlatA);movPlatA.body.allowGravity=false;movPlatA.body.immovable=true;
+  movPlatA.locked=true;scene.movPlatA=movPlatA;
+
+  // Bridge gap (unlocked by swB) - fills the gap at 600-700 lower
+  const bridgeB=scene.add.rectangle(650,H-20,100,20,0x448844,0.3);
+  scene.physics.add.existing(bridgeB,true);bridgeB.locked=true;scene.bridgeB=bridgeB;
+
+  scene.switchesOn=0;
+
+  // Key
+  const key=scene.add.rectangle(1350,H-240,18,18,0xFFCC00);
+  scene.physics.add.existing(key,false);key.body.allowGravity=true;
+  const keyLabel=makeSign(scene,1350,H-265,'LLAVE','#FFE66D');
+  scene.key=key;scene.keyLabel=keyLabel;scene.hasKey=false;
+
+  // Door
+  const door=makeTile(scene,W-140,H-40,48,80,0xFF4466);
+  const doorLabel=scene.add.text(W-140,H-90,'PUERTA',{fontFamily:'monospace',fontSize:'8px',color:'#FF4466'}).setOrigin(.5);
+  scene.door=door;scene.doorLabel=doorLabel;scene.doorOpen=false;
+
+  scene.staticPlatforms=plats;scene.extraRects=rects;
+
+  scene.levelUpdate=function(){
+    // Check switch A (upper)
+    if(!swA.isOn){
+      scene.playerSprites.forEach(s=>{
+        if(s.isDead)return;
+        if(Math.abs(s.x-swA.x)<20&&Math.abs(s.y-swA.y)<20){
+          swA.isOn=true;swA.setFillStyle(0x22BB22);swALabel.setText('A ✓');
+          movPlatA.locked=false;movPlatA.setAlpha(1);movPlatA.body.reset(850,H-200);
+          scene.switchesOn++;AudioManager.button();UIManager.showToast('SWITCH A: PLATAFORMA ACTIVADA!');
+        }
+      });
+    }
+    // Check switch B (lower)
+    if(!swB.isOn){
+      scene.playerSprites.forEach(s=>{
+        if(s.isDead)return;
+        if(Math.abs(s.x-swB.x)<20&&Math.abs(s.y-swB.y)<20){
+          swB.isOn=true;swB.setFillStyle(0x22BB22);swBLabel.setText('B ✓');
+          bridgeB.locked=false;bridgeB.setAlpha(1);
+          // Make bridge solid
+          bridgeB.body.reset(650,H-20);
+          scene.switchesOn++;AudioManager.button();UIManager.showToast('SWITCH B: PUENTE ACTIVADO!');
+        }
+      });
+    }
+    // Move movPlatA
+    if(!movPlatA.locked){
+      movPlatA.x+=scene.movPlatDir*60*scene.game.loop.delta/1000;
+      if(movPlatA.x>1050)scene.movPlatDir=-1;
+      if(movPlatA.x<800)scene.movPlatDir=1;
+      movPlatA.body.reset(movPlatA.x,movPlatA.y);
+    }
+  };
+  scene.movPlatDir=1;
+
+  return {spawnX:40,spawnY:H-80,players:pc};
+}
+
+// ===== LEVEL 1-4: MOVING DANGER =====
+function buildLevel14(scene,pc){
+  const W=2000,H=600;
+  scene.worldW=W;scene.worldH=H;
+  scene.cameras.main.setBounds(0,0,W,H);
+  scene.physics.world.setBounds(0,0,W,H);
+  scene.add.rectangle(W/2,H/2,W,H,0x0d0d1a);
+  drawGrid(scene,W,H,0x1a1a2e);
+
+  const plats=scene.physics.add.staticGroup();
+  const rects=[];
+
+  addPlatGroup(plats,rects,scene,[
+    [0,H-20,400,20,0x3355aa],
+    [500,H-20,400,20,0x3355aa],      // gap 400-500
+    [1000,H-20,400,20,0x3355aa],
+    [1500,H-20,W-1500,20,0x3355aa],
+    [0,0,12,H,0x223366],[W-12,0,12,H,0x223366],
+    // Platforms
+    [100,H-120,120,12,0x335533],
+    [300,H-200,80,12,0x335533],
+    [600,H-140,100,12,0x996633],
+    [900,H-200,100,12,0x335533],
+    [1100,H-140,100,12,0x335533],
+    [1400,H-200,100,12,0x335533],
+    [1600,H-280,100,12,0x335533],
+    [W-200,H-350,120,12,0x335533],
+  ]);
+
+  // Moving platform (player-count weighted)
+  const movPlat=scene.add.rectangle(500,H-100,80,12,0x44AA88);
+  scene.physics.add.existing(movPlat);movPlat.body.allowGravity=false;movPlat.body.immovable=true;
+  scene.movPlat=movPlat;scene.movPlatDir=1;
+
+  // Weight platform (sinks based on players on it)
+  const weightPlat=scene.add.rectangle(750,H-100,100+(pc-1)*20,12,0xAA8844);
+  scene.physics.add.existing(weightPlat);weightPlat.body.allowGravity=false;weightPlat.body.immovable=true;
+  weightPlat.baseY=H-100;weightPlat.currentWeight=0;
+  scene.weightPlat=weightPlat;
+
+  // DANGER WALL (moves right, crushes players)
+  const dangerWall=scene.add.rectangle(-50,H/2,40,H,0xCC2222);
+  scene.physics.add.existing(dangerWall);dangerWall.body.allowGravity=false;dangerWall.body.immovable=true;
+  scene.dangerWall=dangerWall;scene.dangerWallSpeed=40;
+  makeSign(scene,0,H/2-H/2+20,'PELIGRO!','#FF4444');
+
+  // Danger wall activation zones
+  scene.dangerActivated=false;
+
+  // Key (low, must avoid danger)
+  const key=scene.add.rectangle(600,H-55,18,18,0xFFCC00);
+  scene.physics.add.existing(key,false);key.body.allowGravity=false;
+  const keyLabel=makeSign(scene,600,H-78,'LLAVE','#FFE66D');
+  scene.key=key;scene.keyLabel=keyLabel;scene.hasKey=false;
+
+  // Door (top of final climb)
+  const door=makeTile(scene,W-140,H-400,48,80,0xFF4466);
+  const doorLabel=scene.add.text(W-140,H-450,'META',{fontFamily:'monospace',fontSize:'8px',color:'#FF4466'}).setOrigin(.5);
+  scene.door=door;scene.doorLabel=doorLabel;scene.doorOpen=false;
+
+  // Safe zones (small shelters)
+  addPlatGroup(plats,rects,scene,[
+    [350,H-160,20,60,0x444488],      // shelter left
+    [880,H-160,20,60,0x444488],      // shelter mid
+    [1350,H-160,20,60,0x444488],     // shelter right
+  ]);
+  scene.add.text(360,H-220,'REFUGIO',{fontFamily:'monospace',fontSize:'6px',color:'#8888FF'}).setOrigin(.5);
+  scene.add.text(890,H-220,'REFUGIO',{fontFamily:'monospace',fontSize:'6px',color:'#8888FF'}).setOrigin(.5);
+
+  scene.staticPlatforms=plats;scene.extraRects=rects;
+
+  scene.levelUpdate=function(){
+    const dt=scene.game.loop.delta/1000;
+    // Moving platform patrol
+    movPlat.x+=scene.movPlatDir*90*dt;
+    if(movPlat.x>700)scene.movPlatDir=-1;
+    if(movPlat.x<450)scene.movPlatDir=1;
+    movPlat.body.reset(movPlat.x,movPlat.y);
+
+    // Danger wall activation — when any player passes x=400
+    if(!scene.dangerActivated){
+      scene.playerSprites.forEach(s=>{if(!s.isDead&&s.x>400){scene.dangerActivated=true;UIManager.showToast('PARED DE PELIGRO!');AudioManager.death();}});
+    }
+    if(scene.dangerActivated){
+      dangerWall.x+=scene.dangerWallSpeed*dt;
+      dangerWall.body.reset(dangerWall.x,dangerWall.y);
+      // Kill players touching danger wall
+      scene.playerSprites.forEach((s,i)=>{
+        if(s.isDead)return;
+        if(Math.abs(s.x-dangerWall.x)<28)scene.killPlayer(s,i);
+      });
+      // Speed up over time
+      if(scene.dangerWallSpeed<100)scene.dangerWallSpeed+=2*dt;
+    }
+
+    // Weight platform
+    let onWeight=0;
+    scene.playerSprites.forEach(s=>{
+      if(!s.isDead&&Math.abs(s.x-weightPlat.x)<weightPlat.displayWidth/2&&Math.abs(s.y-weightPlat.y)<20)onWeight++;
+    });
+    const targetY=weightPlat.baseY+onWeight*15;
+    weightPlat.y+=(targetY-weightPlat.y)*0.1;
+    weightPlat.body.reset(weightPlat.x,weightPlat.y);
+  };
+
+  return {spawnX:40,spawnY:H-80,players:pc};
+}
+
+// Helpers
+function drawGrid(scene,W,H,col=0x1a1a2e){
+  for(let x=0;x<W;x+=64)for(let y=0;y<H;y+=64){
+    scene.add.rectangle(x+32,y+32,62,62,col).setAlpha(.4);
+  }
+}
+function addPlatGroup(group,rects,scene,defs){
+  defs.forEach(([x,y,w,h,c])=>{
+    const r=scene.add.rectangle(x+w/2,y+h/2,w,h,c);
+    scene.physics.add.existing(r,true);group.add(r);rects.push(r);
+  });
+}
+
+// ============================================================
+// BOT AI MANAGER
+// ============================================================
+const BotAIManager = (() => {
+  function update(scene,botSprite,botIdx,levelId){
+    if(botSprite.isDead)return;
+    const dt=scene.game.loop.delta/1000;
+    const s=botSprite;
+    const lp=scene.playerSprites[scene.localPlayerIdx];
+    if(!lp)return;
+
+    // Find nearest human or first alive player
+    let target=null;
+    for(let i=0;i<scene.playerSprites.length;i++){
+      if(i!==botIdx&&!scene.playerSprites[i].isDead){target=scene.playerSprites[i];break;}
+    }
+    // Fallback: follow door or key
+    if(!target){
+      if(!scene.hasKey&&scene.key&&scene.key.active)target=scene.key;
+      else if(scene.door)target=scene.door;
+      else return;
+    }
+
+    const dx=target.x-s.x;
+    const dy=target.y-s.y;
+    const onGround=s.body.blocked.down;
+
+    // Move toward target
+    if(Math.abs(dx)>30){
+      const spd=Math.min(160,Math.abs(dx)*2);
+      s.setVelocityX(dx>0?spd:-spd);
+      s.setFlipX(dx<0);
+    }else{s.setVelocityX(0);}
+
+    // Jump logic: blocked, or target is higher, or near edge
+    if(onGround){
+      const shouldJump=(s.body.blocked.right||s.body.blocked.left)||(dy<-50&&Math.abs(dx)<100)||(Math.abs(dx)>20&&Math.random()<0.01);
+      if(shouldJump){
+        s.setVelocityY(-520);
+        AudioManager.jump();
+      }
+    }
+
+    // Key pickup
+    if(!scene.hasKey&&scene.key&&scene.key.active){
+      if(Math.abs(s.x-scene.key.x)<24&&Math.abs(s.y-scene.key.y)<24){
+        scene.hasKey=true;
+        if(scene.keyLabel&&scene.keyLabel.active)scene.keyLabel.destroy();
+        if(scene.key.active)scene.key.destroy();
+        scene.openDoor();
+        AudioManager.button();
+      }
+    }
+
+    // Special: push blocks
+    if(levelId==='1-2'&&scene.pushBlock){
+      const bx=scene.pushBlock.x,by=scene.pushBlock.y;
+      if(Math.abs(s.y-by)<40&&Math.abs(s.x-bx)<60){
+        if(s.x<bx)s.setVelocityX(180);
+        else s.setVelocityX(-180);
+      }
+    }
+  }
+  return {update};
+})();
+
+// ============================================================
+// MULTIPLAYER MANAGER
+// ============================================================
+const MultiplayerManager = (() => {
+  let remoteStates={};
+  function onRemoteState(state){remoteStates[state.playerIdx]=state;}
+  function applyToScene(scene){
+    const lp=scene.localPlayerIdx;
+    Object.values(remoteStates).forEach(rs=>{
+      const s=scene.playerSprites[rs.playerIdx];
+      if(!s||rs.playerIdx===lp)return;
+      s.x+=(rs.x-s.x)*0.25;
+      s.y+=(rs.y-s.y)*0.25;
+      if(rs.flipX!==undefined)s.setFlipX(rs.flipX);
+      if(rs.isDead&&!s.isDead){s.isDead=true;s.setAlpha(.3);}
+      if(!rs.isDead&&s.isDead){s.isDead=false;s.setAlpha(1);}
+    });
+  }
+  function broadcast(scene){
+    const lp=scene.localPlayerIdx;
+    const s=scene.playerSprites[lp];
+    if(!s)return;
+    RoomManager.broadcastGameState({playerIdx:lp,x:s.x,y:s.y,flipX:s.flipX,isDead:s.isDead,vx:s.body.velocity.x,vy:s.body.velocity.y});
+  }
+  function clear(){remoteStates={};}
+  return {onRemoteState,applyToScene,broadcast,clear};
+})();
+
+// ============================================================
+// PHASER GAME
+// ============================================================
+let phaserGame=null;
+let gameTimer=0;
+let gameAttempts=0;
+let gameTimerInterval=null;
+let currentLevelIdx=0;
+
+function makeTextures(phaserScene){
+  function c(color,w,h,type){
+    const cv=document.createElement('canvas');cv.width=w;cv.height=h;
+    const ctx=cv.getContext('2d');
+    if(type==='cat'){
+      // Minimal square cat
+      ctx.fillStyle=color;ctx.fillRect(0,0,w,h);
+      ctx.strokeStyle='#000';ctx.lineWidth=2;ctx.strokeRect(1,1,w-2,h-2);
+      // Eyes
+      ctx.fillStyle='#000';
+      ctx.fillRect(w*.22,h*.28,w*.14,h*.14);
+      ctx.fillRect(w*.64,h*.28,w*.14,h*.14);
+      // Mouth
+      ctx.fillRect(w*.38,h*.55,w*.24,h*.08);
+      // Ears (triangles)
+      ctx.fillStyle=color;
+      ctx.beginPath();ctx.moveTo(2,2);ctx.lineTo(w*.28,h*.22);ctx.lineTo(0,h*.25);ctx.fill();
+      ctx.beginPath();ctx.moveTo(w-2,2);ctx.lineTo(w*.72,h*.22);ctx.lineTo(w,h*.25);ctx.fill();
+      ctx.strokeStyle='#000';ctx.lineWidth=1.5;
+      ctx.beginPath();ctx.moveTo(2,2);ctx.lineTo(w*.28,h*.22);ctx.lineTo(0,h*.25);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(w-2,2);ctx.lineTo(w*.72,h*.22);ctx.lineTo(w,h*.25);ctx.stroke();
+    }else if(type==='block'){
+      ctx.fillStyle=color;ctx.fillRect(0,0,w,h);
+      ctx.strokeStyle='rgba(255,255,255,.25)';ctx.lineWidth=1;ctx.strokeRect(1,1,w-2,h-2);
+    }else{
+      ctx.fillStyle=color;ctx.fillRect(0,0,w,h);
+    }
+    return cv.toDataURL();
+  }
+  COLORS.forEach((col,i)=>{
+    phaserScene.textures.addBase64('cat'+i,c(col,32,32,'cat'));
+    phaserScene.textures.addBase64('cat_dead'+i,c(col+'55',32,32,'cat'));
+  });
+  phaserScene.textures.addBase64('block_push',c('#997744',48,48,'block'));
+}
+
+function preload(){makeTextures(this);}
+
+function createScene(players,isMobile,levelIdx){
+  const scene=this;
+  sceneRef=scene;
+  scene.players=players;
+  scene.localPlayerIdx=localState.playerIndex;
+  scene.gameOver=false;
+  scene.levelComplete=false;
+  scene.deaths={};
+  players.forEach(p=>scene.deaths[p.id]=0);
+
+  const pc=players.length;
+  const levelDef=LevelManager.getLevels()[levelIdx];
+  if(!levelDef)return;
+  scene.currentLevelId=levelDef.id;
+
+  // Build level
+  const info=levelDef.build(scene,pc);
+  scene.spawnX=info.spawnX;scene.spawnY=info.spawnY;
+
+  // Camera
+  scene.cameras.main.setBackgroundColor('#111122');
+
+  // ---- PLAYERS ----
+  scene.playerSprites=[];scene.playerNames=[];scene.playerHats=[];scene.playerInputs={};
+
+  players.forEach((p,i)=>{
+    const colorIdx=Math.max(0,COLORS.indexOf(p.color));
+    const sprite=scene.physics.add.sprite(info.spawnX+i*36,info.spawnY,'cat'+colorIdx);
+    sprite.setCollideWorldBounds(true);sprite.setBounce(0.02);sprite.setScale(1);
+    sprite.playerData=p;sprite.playerIdx=i;sprite.isDead=false;sprite.jumpCooldown=0;
+
+    const nameTag=scene.add.text(0,0,p.username.slice(0,8),{fontFamily:'monospace',fontSize:'7px',color:p.color,stroke:'#000',strokeThickness:2}).setOrigin(.5).setDepth(10);
+    const hatEmoji=HATS.find(h=>h.id===p.hat)?.icon||'';
+    const hatTag=scene.add.text(0,0,hatEmoji,{fontSize:'11px'}).setOrigin(.5).setDepth(10);
+
+    scene.playerSprites.push(sprite);scene.playerNames.push(nameTag);scene.playerHats.push(hatTag);
+    scene.playerInputs[i]={left:false,right:false,jump:false};
+
+    // Colliders
+    scene.physics.add.collider(sprite,scene.staticPlatforms);
+    if(scene.movPlat)scene.physics.add.collider(sprite,scene.movPlat);
+    if(scene.elev)scene.physics.add.collider(sprite,scene.elev);
+    if(scene.movPlatA)scene.physics.add.collider(sprite,scene.movPlatA);
+    if(scene.weightPlat)scene.physics.add.collider(sprite,scene.weightPlat);
+    if(scene.dangerWall)scene.physics.add.collider(sprite,scene.dangerWall,()=>{
+      if(!sprite.isDead)scene.killPlayer(sprite,i);
+    });
+  });
+
+  // Push block colliders
+  if(scene.pushBlock){
+    scene.physics.add.collider(scene.pushBlock,scene.staticPlatforms);
+    scene.playerSprites.forEach((s,i)=>{
+      scene.physics.add.collider(s,scene.pushBlock,(ps,pb)=>{
+        const pushForce=ps.body.velocity.x*1.5;
+        pb.setVelocityX(pushForce);
+      });
+    });
+  }
+  if(scene.pushBox2){
+    scene.physics.add.collider(scene.pushBox2,scene.staticPlatforms);
+    scene.playerSprites.forEach(s=>{scene.physics.add.collider(s,scene.pushBox2,(ps,pb)=>{pb.setVelocityX(ps.body.velocity.x*1.5);});});
+  }
+
+  // Key colliders
+  if(scene.key){
+    scene.physics.add.collider(scene.key,scene.staticPlatforms);
+    if(scene.pushBlock)scene.physics.add.collider(scene.key,scene.pushBlock);
+  }
+
+  // Camera follow local player
+  if(scene.playerSprites[scene.localPlayerIdx]){
+    scene.cameras.main.startFollow(scene.playerSprites[scene.localPlayerIdx],true,0.1,0.1);
+  }
+
+  // ---- INPUT ----
+  scene.cursors=scene.input.keyboard.createCursorKeys();
+  scene.wasd={
+    left:scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A),
+    right:scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D),
+    up:scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.W),
+    space:scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE)
+  };
+  if(isMobile)setupMobileControls.call(scene);
+
+  // ---- MULTIPLAYER ----
+  MultiplayerManager.clear();
+  phaserGame.events.on('remote_state',s=>MultiplayerManager.onRemoteState(s));
+  phaserGame.events.on('level_reset_remote',()=>{if(!scene.gameOver)scene.doReset();});
+
+  scene.syncTimer=0;
+  scene.jumpPressed=false;
+
+  UIManager.updateHUD(levelDef.num,gameAttempts);
+}
+
+let sceneRef=null;
+
+function updateScene(){
+  const scene=this;
+  if(scene.gameOver||scene.levelComplete)return;
+
+  const lp=scene.localPlayerIdx;
+  const localSprite=scene.playerSprites[lp];
+  if(!localSprite)return;
+
+  // ---- LOCAL INPUT ----
+  const inp=scene.playerInputs[lp];
+  inp.left=scene.cursors.left.isDown||scene.wasd.left.isDown;
+  inp.right=scene.cursors.right.isDown||scene.wasd.right.isDown;
+  const jumpDown=scene.cursors.up.isDown||scene.wasd.up.isDown||scene.wasd.space.isDown||scene.cursors.space?.isDown;
+  inp.jump=jumpDown&&!scene.jumpPressed;
+  scene.jumpPressed=jumpDown;
+
+  // ---- MOVE ALL PLAYERS ----
+  scene.playerSprites.forEach((s,i)=>{
+    if(s.isDead)return;
+    const input=scene.playerInputs[i];
+    const onGround=s.body.blocked.down;
+
+    if(input.left){s.setVelocityX(-190);s.setFlipX(true);}
+    else if(input.right){s.setVelocityX(190);s.setFlipX(false);}
+    else{s.setVelocityX(s.body.velocity.x*0.8);}
+
+    if(input.jump&&onGround){
+      s.setVelocityY(-520);
+      AudioManager.jump();
+      input.jump=false;
+    }
+    // Clamp velocity
+    s.body.velocity.x=Phaser.Math.Clamp(s.body.velocity.x,-280,280);
+  });
+
+  // ---- BOT AI ----
+  scene.playerSprites.forEach((s,i)=>{
+    if(!scene.players[i]||!scene.players[i].isBot||s.isDead)return;
+    BotAIManager.update(scene,s,i,scene.currentLevelId);
+  });
+
+  // ---- PLAYER-PLAYER COLLISIONS (stacking) ----
+  for(let i=0;i<scene.playerSprites.length;i++){
+    for(let j=i+1;j<scene.playerSprites.length;j++){
+      if(!scene.playerSprites[i].isDead&&!scene.playerSprites[j].isDead){
+        scene.physics.collide(scene.playerSprites[i],scene.playerSprites[j]);
+      }
+    }
+  }
+
+  // ---- LEVEL-SPECIFIC UPDATE ----
+  if(scene.levelUpdate)scene.levelUpdate();
+
+  // ---- ELEVATOR ----
+  if(scene.elev&&scene.elevActive){
+    const e=scene.elev;
+    e.y+=scene.elevDir*50*scene.game.loop.delta/1000;
+    if(e.y<scene.elevMin)scene.elevDir=1;
+    if(e.y>scene.elevMax)scene.elevDir=-1;
+    e.body.reset(e.x,e.y);
+  }
+
+  // ---- KEY PICKUP ----
+  if(!scene.hasKey&&scene.key&&scene.key.active){
+    scene.playerSprites.forEach((s,i)=>{
+      if(s.isDead)return;
+      if(Math.abs(s.x-scene.key.x)<24&&Math.abs(s.y-scene.key.y)<24){
+        scene.hasKey=true;
+        if(scene.keyLabel&&scene.keyLabel.active)scene.keyLabel.destroy();
+        if(scene.key.active)scene.key.destroy();
+        scene.openDoor();
+        AudioManager.button();UIManager.showToast('LLAVE RECOGIDA!');
+      }
+    });
+  }
+
+  // ---- DOOR ----
+  if(scene.doorOpen){
+    let allAtDoor=true;
+    scene.playerSprites.forEach(s=>{
+      if(s.isDead)return;
+      if(Math.abs(s.x-scene.door.x)>36||Math.abs(s.y-scene.door.y)>40)allAtDoor=false;
+    });
+    if(allAtDoor)scene.triggerLevelComplete();
+  }
+
+  // ---- DEATH CHECK ----
+  scene.playerSprites.forEach((s,i)=>{
+    if(s.isDead)return;
+    if(s.y>scene.worldH+40)scene.killPlayer(s,i);
+  });
+
+  // ---- VISUALS ----
+  scene.playerSprites.forEach((s,i)=>{
+    scene.playerNames[i].setPosition(s.x,s.y-24);
+    scene.playerHats[i].setPosition(s.x,s.y-34);
+    if(!s.isDead){
+      const inAir=!s.body.blocked.down;
+      s.setScale(inAir?0.92:1,inAir?1.08:0.94);
+    }
+  });
+
+  // ---- REMOTE INTERP ----
+  MultiplayerManager.applyToScene(scene);
+
+  // ---- SYNC ----
+  scene.syncTimer++;
+  if(scene.syncTimer>3){scene.syncTimer=0;MultiplayerManager.broadcast(scene);}
+}
+
+// ---- Scene Methods ----
+Phaser.Scene.prototype.killPlayer=function(sprite,idx){
+  if(sprite.isDead||this.gameOver)return;
+  sprite.isDead=true;
+  AudioManager.death();
+  const p=this.players[idx];
+  this.deaths[p.id]=(this.deaths[p.id]||0)+1;
+  if(idx===this.localPlayerIdx){localState.stats.deaths++;AccountManager.saveProfile();}
+  updateHUD();
+
+  // Death flash
+  const flash=this.add.rectangle(sprite.x,sprite.y,32,32,0xFF4444).setDepth(20);
+  this.tweens.add({targets:flash,alpha:0,scaleX:3,scaleY:3,duration:400,onComplete:()=>flash.destroy()});
+  sprite.setAlpha(0);
+
+  // PICO PARK: one death = full reset
+  this.gameOver=true;
+  AudioManager.reset();
+  RoomManager.broadcastLevelReset();
+  UIManager.showToast('REINICIANDO...');
+  this.time.delayedCall(800,()=>{
+    gameAttempts++;
+    UIManager.updateHUD(undefined,gameAttempts);
+    this.doReset();
+  });
+};
+
+Phaser.Scene.prototype.doReset=function(){
+  this.gameOver=false;
+  this.levelComplete=false;
+  this.hasKey=false;
+  this.doorOpen=false;
+  if(this.key&&this.key.active){}
+  // Restart scene fully
+  this.scene.restart({players:this.players,isMobile:this._isMobile,levelIdx:LevelManager.currentIdx});
+};
+
+Phaser.Scene.prototype.openDoor=function(){
+  if(this.doorOpen)return;
+  this.doorOpen=true;
+  if(this.door){this.door.setFillStyle(0x44FFAA);}
+  if(this.doorLabel){this.doorLabel.setColor('#44FFAA').setText('ENTRA!');}
+  AudioManager.door();UIManager.showToast('PUERTA ABIERTA! TODOS ADENTRO!');
+};
+
+Phaser.Scene.prototype.triggerLevelComplete=function(){
+  if(this.levelComplete)return;
+  this.levelComplete=true;
+  AudioManager.victory();
+  if(gameTimerInterval)clearInterval(gameTimerInterval);
+  localState.stats.wins++;localState.stats.played++;AccountManager.saveProfile();
+
+  if(LevelManager.hasNext()){
+    // Next sublevel
+    this.time.delayedCall(600,()=>{
+      const next=LevelManager.nextLevel();
+      RoomManager.broadcastLevelNext(LevelManager.currentIdx);
+      UIManager.showTransition(next.num,next.name,()=>{
+        restartForLevel(LevelManager.currentIdx);
+      });
+    });
+  }else{
+    // All levels complete!
+    this.time.delayedCall(600,()=>showResults(this));
+  }
+};
+
+function restartForLevel(idx){
+  const rooms=RoomManager.getRooms?undefined:undefined;
+  const room=RoomManager.getRoom();
+  const players=room?room.players:[AccountManager.makePlayerObj()];
+  gameTimer=0;
+  if(gameTimerInterval)clearInterval(gameTimerInterval);
+  gameTimerInterval=setInterval(()=>{
+    gameTimer++;const m=Math.floor(gameTimer/60),s=gameTimer%60;
+    document.getElementById('hud-timer').textContent=`${m}:${s.toString().padStart(2,'0')}`;
+  },1000);
+  if(phaserGame){phaserGame.destroy(true);phaserGame=null;}
+  startPhaserGame(players,idx);
+}
+
+RoomManager.setOnMessage(msg=>{
+  if(msg.type==='room_update'){RoomManager.roomState=msg.room;UIManager.updateLobbyUI();}
+  else if(msg.type==='game_start'){startGame(msg.levelIdx||0);}
+  else if(msg.type==='game_state'){if(phaserGame)phaserGame.events.emit('remote_state',msg.state);}
+  else if(msg.type==='level_reset'){if(phaserGame)phaserGame.events.emit('level_reset_remote');}
+  else if(msg.type==='level_next'){
+    if(phaserGame){
+      LevelManager.setCurrentLevel(msg.idx);
+      const def=LevelManager.getCurrent();
+      UIManager.showTransition(def.num,def.name,()=>restartForLevel(msg.idx));
+    }
+  }
+  else if(msg.type==='level_select'){
+    LevelManager.selectLevel(msg.idx);
+    renderLevelSelect(msg.idx);
+    document.getElementById('select-status').textContent='HOST SELECCIONO: '+LevelManager.getLevels()[msg.idx].num+' '+LevelManager.getLevels()[msg.idx].name;
+  }
+});
+
+function setupMobileControls(){
+  const scene=this;
+  const lp=scene.localPlayerIdx;
+  const left=document.getElementById('mob-left');
+  const right=document.getElementById('mob-right');
+  const jump=document.getElementById('mob-jump');
+  const set=(k,v)=>{scene.playerInputs[lp][k]=v;};
+  left.addEventListener('touchstart',e=>{e.preventDefault();set('left',true);},{passive:false});
+  left.addEventListener('touchend',e=>{e.preventDefault();set('left',false);},{passive:false});
+  right.addEventListener('touchstart',e=>{e.preventDefault();set('right',true);},{passive:false});
+  right.addEventListener('touchend',e=>{e.preventDefault();set('right',false);},{passive:false});
+  jump.addEventListener('touchstart',e=>{e.preventDefault();set('jump',true);},{passive:false});
+  jump.addEventListener('touchend',e=>{e.preventDefault();set('jump',false);},{passive:false});
+}
+
+function startPhaserGame(players,levelIdx){
+  const W=window.innerWidth;
+  const H=window.innerHeight-(window.innerWidth<=768?70:0);
+  const isMobile=window.innerWidth<=768;
+  phaserGame=new Phaser.Game({
+    type:Phaser.AUTO,width:W,height:H,parent:'game-container',
+    backgroundColor:'#111122',
+    physics:{default:'arcade',arcade:{gravity:{y:900},debug:false}},
+    scene:{
+      key:'GameScene',
+      preload:preload,
+      create:function(){
+        this._isMobile=isMobile;
+        // Pass init data
+        const data=this.sys.settings.data||{};
+        const lvIdx=data.levelIdx!==undefined?data.levelIdx:levelIdx;
+        const lvPlayers=data.players||players;
+        createScene.call(this,lvPlayers,isMobile,lvIdx);
+      },
+      update:updateScene,
+      init:function(data){this._initData=data;}
+    }
+  });
+  // Override scene restart to pass data
+  phaserGame.scene.getScene('GameScene').scene.restart=function(data){
+    this.systems.scene.restart(data||{});
+  };
+}
+
+function startGame(levelIdx){
+  levelIdx=levelIdx||0;
+  LevelManager.setCurrentLevel(levelIdx);
+  UIManager.showScreen(null);
+  document.getElementById('game-container').style.display='block';
+  document.getElementById('hud').style.display='flex';
+
+  const room=RoomManager.getRoom();
+  const players=room?room.players:[AccountManager.makePlayerObj()];
+  UIManager.updateHUD(LevelManager.getCurrent().num,gameAttempts);
+
+  gameTimer=0;
+  if(gameTimerInterval)clearInterval(gameTimerInterval);
+  gameTimerInterval=setInterval(()=>{
+    gameTimer++;const m=Math.floor(gameTimer/60),s=gameTimer%60;
+    document.getElementById('hud-timer').textContent=`${m}:${s.toString().padStart(2,'0')}`;
+  },1000);
+
+  if(phaserGame){phaserGame.destroy(true);phaserGame=null;}
+
+  const def=LevelManager.getLevels()[levelIdx];
+  UIManager.showTransition(def.num,def.name,()=>startPhaserGame(players,levelIdx));
+}
+
+function updateHUD(){UIManager.updateHUD(LevelManager.getCurrent()?.num,gameAttempts);}
+
+function showResults(scene){
+  if(phaserGame){phaserGame.destroy(true);phaserGame=null;}
+  document.getElementById('game-container').style.display='none';
+  document.getElementById('hud').style.display='none';
+
+  const m=Math.floor(gameTimer/60),s=gameTimer%60;
+  document.getElementById('result-time').textContent=`${m}:${s.toString().padStart(2,'0')}`;
+  document.getElementById('result-attempts').textContent=gameAttempts;
+  const stars=gameTimer<90?'★★★':gameTimer<200?'★★':'★';
+  document.getElementById('result-stars').textContent=stars;
+
+  const rows=document.getElementById('result-rows');rows.innerHTML='';
+  const room=RoomManager.getRoom();
+  const players=room?room.players:[AccountManager.makePlayerObj()];
+  let worst=null,worstD=0;
+  players.forEach(p=>{
+    const d=scene&&scene.deaths?scene.deaths[p.id]||0:0;
+    if(d>worstD){worstD=d;worst=p;}
+    const row=document.createElement('div');row.className='result-row';
+    const hat=HATS.find(h=>h.id===p.hat)?.icon||'';
+    row.innerHTML=`<span style="color:${p.color}">${hat} ${p.username}</span><span class="result-val bad">x${d} muertes</span>`;
+    rows.appendChild(row);
+  });
+  document.getElementById('result-worst').textContent=worst?worst.username+' ('+worstD+')':'Nadie';
+  UIManager.showScreen('result-screen');
+}
+
+// ============================================================
+// LEVEL SELECT UI
+// ============================================================
+function renderLevelSelect(selectedIdx){
+  const grid=document.getElementById('levels-grid');grid.innerHTML='';
+  const isHost=localState.isHost;
+  LevelManager.getLevels().forEach((lv,i)=>{
+    const card=document.createElement('div');
+    card.className='level-card'+(i===selectedIdx?' selected':'');
+    card.innerHTML=`<div class="level-num">${lv.num}</div><div class="level-icon">${lv.icon}</div><div class="level-name">${lv.name}</div><div class="level-desc">${lv.desc}</div>`;
+    if(isHost){
+      card.onclick=()=>{
+        LevelManager.selectLevel(i);
+        document.querySelectorAll('.level-card').forEach(c=>c.classList.remove('selected'));
+        card.classList.add('selected');
+        RoomManager.broadcastLevelSelect(i);
+        document.getElementById('btn-launch-level').style.display='block';
+        document.getElementById('select-status').textContent='NIVEL SELECCIONADO: '+lv.num+' '+lv.name;
+      };
+    }
+    grid.appendChild(card);
+  });
+  document.getElementById('btn-launch-level').style.display=isHost&&selectedIdx>=0?'block':'none';
+  document.getElementById('select-status').textContent=isHost?'ELIGE UN NIVEL':'ESPERANDO AL HOST...';
+}
+
+// ============================================================
+// EVENT LISTENERS
+// ============================================================
+document.getElementById('btn-login').onclick=()=>{
+  const u=document.getElementById('login-user').value.trim();
+  const p=document.getElementById('login-pass').value;
+  if(AccountManager.login(u,p)){
+    UIManager.showScreen('main-menu');
+    document.getElementById('welcome-msg').textContent='BIENVENIDO, '+u.toUpperCase()+'!';
+    UIManager.showToast('Sesion iniciada como '+u);
+  }else{
+    UIManager.showToast('Usuario o contrasena incorrectos');
+    document.getElementById('login-screen').querySelector('.panel').style.animation='shake .3s ease';
+    setTimeout(()=>document.getElementById('login-screen').querySelector('.panel').style.animation='',300);
+  }
+};
+
+document.getElementById('btn-register-show').onclick=()=>{
+  const u=document.getElementById('login-user').value.trim();
+  const p=document.getElementById('login-pass').value;
+  const err=AccountManager.register(u,p);
+  if(err){UIManager.showToast(err);return;}
+  UIManager.showToast('Cuenta creada!');
+  setTimeout(()=>{if(AccountManager.login(u,p)){UIManager.showScreen('main-menu');document.getElementById('welcome-msg').textContent='BIENVENIDO, '+u.toUpperCase()+'!';}},600);
+};
+
+['login-user','login-pass'].forEach(id=>{
+  document.getElementById(id).addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('btn-login').click();});
+});
+
+document.getElementById('btn-create-room').onclick=()=>{
+  const code=RoomManager.createRoom();
+  document.getElementById('lobby-join-row').style.display='none';
+  document.getElementById('btn-start-game').style.display='block';
+  UIManager.showScreen('room-lobby');UIManager.updateLobbyUI();
+  UIManager.showToast('Sala creada: '+code);
+};
+
+document.getElementById('btn-join-room').onclick=()=>{
+  document.getElementById('lobby-join-row').style.display='block';
+  document.getElementById('btn-start-game').style.display='none';
+  document.getElementById('lobby-code').textContent='----';
+  UIManager.showScreen('room-lobby');
+};
+
+document.getElementById('btn-do-join').onclick=()=>{
+  const code=document.getElementById('room-code-input').value.toUpperCase().trim();
+  if(!code){UIManager.showToast('Ingresa un codigo');return;}
+  const err=RoomManager.joinRoom(code);
+  if(err){UIManager.showToast(err);return;}
+  document.getElementById('lobby-join-row').style.display='none';
+  UIManager.updateLobbyUI();RoomManager.broadcastRoomUpdate();
+  UIManager.showToast('Unido a sala '+code+'!');
+};
+
+document.getElementById('room-code-input').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('btn-do-join').click();});
+
+document.getElementById('btn-solo').onclick=()=>{
+  const code=RoomManager.createRoom();
+  RoomManager.addBot(code);RoomManager.addBot(code);
+  gameAttempts=0;
+  UIManager.showScreen('level-select');
+  renderLevelSelect(0);LevelManager.selectLevel(0);
+  document.getElementById('btn-launch-level').style.display='block';
+};
+
+document.getElementById('btn-start-game').onclick=()=>{
+  if(!localState.isHost){UIManager.showToast('Solo el host puede iniciar');return;}
+  UIManager.showScreen('level-select');
+  renderLevelSelect(LevelManager.selectedIdx);
+};
+
+document.getElementById('btn-add-bot').onclick=()=>{
+  if(!localState.roomId)return;
+  RoomManager.addBot(localState.roomId);UIManager.updateLobbyUI();
+  UIManager.showToast('Bot agregado!');
+};
+
+document.getElementById('btn-leave-room').onclick=()=>{
+  if(localState.roomId){
+    const rooms=JSON.parse(localStorage.getItem('nyanko_rooms')||'{}');
+    if(rooms[localState.roomId]){
+      rooms[localState.roomId].players=rooms[localState.roomId].players.filter(p=>p.id!==localState.playerId);
+      localStorage.setItem('nyanko_rooms',JSON.stringify(rooms));
+      RoomManager.broadcastRoomUpdate();
+    }
+    localState.roomId=null;localState.isHost=false;
+  }
+  UIManager.showScreen('main-menu');
+};
+
+document.getElementById('btn-launch-level').onclick=()=>{
+  if(!localState.isHost){UIManager.showToast('Solo el host puede lanzar');return;}
+  const idx=LevelManager.selectedIdx;
+  gameAttempts=0;
+  RoomManager.broadcastGameStart(idx);
+  startGame(idx);
+};
+
+document.getElementById('btn-back-select').onclick=()=>{
+  if(localState.roomId)UIManager.showScreen('room-lobby');
+  else UIManager.showScreen('main-menu');
+};
+
+document.getElementById('btn-cosmetics').onclick=()=>{
+  UIManager.buildHatGrid();
+  document.getElementById('cosmetic-name').value=localState.username;
+  document.getElementById('preview-name').textContent=localState.username||'GATITO';
+  UIManager.showScreen('cosmetics-screen');
+};
+
+document.getElementById('cosmetic-name').oninput=e=>{
+  document.getElementById('preview-name').textContent=e.target.value||'GATITO';
+};
+
+document.getElementById('btn-save-cosm').onclick=()=>{
+  const n=document.getElementById('cosmetic-name').value.trim();
+  if(n&&n.length>=2)localState.username=n;
+  AccountManager.saveProfile();UIManager.showToast('Guardado!');UIManager.showScreen('main-menu');
+};
+
+document.getElementById('btn-back-cosm').onclick=()=>UIManager.showScreen('main-menu');
+
+document.getElementById('btn-stats').onclick=()=>{
+  const s=localState.stats;UIManager.showToast(`Partidas:${s.played} Muertes:${s.deaths} Victorias:${s.wins}`,4000);
+};
+
+document.getElementById('btn-play-again').onclick=()=>{
+  UIManager.showScreen(null);document.getElementById('result-screen').classList.remove('active');
+  gameAttempts=0;LevelManager.setCurrentLevel(0);startGame(0);
+};
+
+document.getElementById('btn-menu-result').onclick=()=>{
+  if(phaserGame){phaserGame.destroy(true);phaserGame=null;}
+  document.getElementById('game-container').style.display='none';
+  document.getElementById('hud').style.display='none';
+  if(gameTimerInterval)clearInterval(gameTimerInterval);
+  if(localState.roomId){
+    const rooms=JSON.parse(localStorage.getItem('nyanko_rooms')||'{}');
+    delete rooms[localState.roomId];localStorage.setItem('nyanko_rooms',JSON.stringify(rooms));
+    localState.roomId=null;
+  }
+  UIManager.showScreen('main-menu');
+};
+
+// Lobby refresh
+setInterval(()=>{
+  if(localState.roomId&&document.getElementById('room-lobby').classList.contains('active')){
+    UIManager.updateLobbyUI();
+  }
+},1000);
+
+// Fix scene restart to properly pass data
+const _orig=Phaser.Scene.prototype.scene;
+</script>
+</body>
+</html>
