@@ -1,0 +1,1412 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NYANKO PARTY 🐱</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.60.0/phaser.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323:wght@400&display=swap');
+
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --c1:#FF6B6B;--c2:#FFE66D;--c3:#4ECDC4;--c4:#45B7D1;--c5:#96CEB4;--c6:#FF8B94;--c7:#A8E6CF;--c8:#DDA0DD;
+  --bg:#1a1a2e;--bg2:#16213e;--panel:#0f3460;--accent:#e94560;--white:#f0f0f0;
+}
+html,body{width:100%;height:100%;background:var(--bg);overflow:hidden;font-family:'Press Start 2P',monospace}
+
+#ui-overlay{position:fixed;inset:0;z-index:100;pointer-events:none}
+#ui-overlay>*{pointer-events:all}
+
+#main-menu{
+  position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:var(--bg);z-index:200;gap:12px
+}
+.logo{font-size:clamp(20px,5vw,48px);color:var(--c2);text-shadow:4px 4px 0 var(--accent);letter-spacing:4px;margin-bottom:8px;animation:bounce 1s ease-in-out infinite alternate}
+.logo-sub{font-size:clamp(8px,2vw,14px);color:var(--c3);letter-spacing:2px;margin-bottom:20px}
+@keyframes bounce{0%{transform:translateY(0)}100%{transform:translateY(-8px)}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+@keyframes pop{0%{transform:scale(1)}50%{transform:scale(1.2)}100%{transform:scale(1)}}
+@keyframes slideIn{from{transform:translateY(30px);opacity:0}to{transform:translateY(0);opacity:1}}
+
+.menu-cats{display:flex;gap:16px;margin:8px 0}
+.menu-cat{font-size:28px;animation:bounce 0.8s ease-in-out infinite alternate}
+.menu-cat:nth-child(2){animation-delay:0.2s}.menu-cat:nth-child(3){animation-delay:0.4s}
+.menu-cat:nth-child(4){animation-delay:0.6s}.menu-cat:nth-child(5){animation-delay:0.8s}
+
+.btn{
+  font-family:'Press Start 2P',monospace;font-size:clamp(8px,1.5vw,12px);
+  padding:12px 24px;border:3px solid;cursor:pointer;text-transform:uppercase;
+  transition:transform 0.1s,box-shadow 0.1s;letter-spacing:1px;min-width:220px
+}
+.btn:hover{transform:translate(-2px,-2px)}
+.btn:active{transform:translate(0,0);box-shadow:none!important}
+.btn-primary{background:var(--accent);color:#fff;border-color:#fff;box-shadow:4px 4px 0 #fff}
+.btn-secondary{background:var(--c3);color:var(--bg);border-color:#fff;box-shadow:4px 4px 0 rgba(255,255,255,0.3)}
+.btn-ghost{background:transparent;color:var(--white);border-color:var(--white);box-shadow:4px 4px 0 rgba(255,255,255,0.2)}
+.btn-danger{background:#c0392b;color:#fff;border-color:#fff;box-shadow:4px 4px 0 #fff}
+.btn-yellow{background:var(--c2);color:var(--bg);border-color:#fff;box-shadow:4px 4px 0 rgba(255,255,255,0.4)}
+
+#game-container{width:100%;height:100vh;display:none}
+#game-container canvas{display:block}
+
+#hud{
+  position:absolute;top:0;left:0;right:0;padding:8px 12px;display:none;
+  background:rgba(0,0,0,0.7);border-bottom:2px solid var(--c2);
+  flex-direction:row;align-items:center;gap:12px;flex-wrap:wrap;z-index:50
+}
+.hud-players{display:flex;gap:8px;flex:1;flex-wrap:wrap}
+.hud-player{
+  display:flex;align-items:center;gap:6px;padding:4px 8px;
+  border:2px solid rgba(255,255,255,0.3);font-size:8px;color:#fff;
+  background:rgba(255,255,255,0.05)
+}
+.hud-dot{width:14px;height:14px;border:2px solid rgba(255,255,255,0.6)}
+.hud-deaths{color:var(--c1);font-size:7px}
+.hud-timer{font-size:14px;color:var(--c2);margin-left:auto}
+.hud-room{font-size:7px;color:var(--c3)}
+
+#room-lobby{
+  position:absolute;inset:0;background:var(--bg);z-index:200;display:none;
+  flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:20px
+}
+.lobby-box{
+  background:var(--panel);border:3px solid var(--c2);padding:20px;width:min(480px,95vw);
+  display:flex;flex-direction:column;gap:12px
+}
+.lobby-title{font-size:clamp(10px,2vw,16px);color:var(--c2);text-align:center;margin-bottom:8px}
+.lobby-code{font-size:clamp(18px,4vw,32px);color:var(--c3);text-align:center;letter-spacing:8px;padding:12px;background:rgba(0,0,0,0.3);border:2px dashed var(--c3)}
+.lobby-players{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.lobby-slot{
+  aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  border:2px dashed rgba(255,255,255,0.2);font-size:7px;color:rgba(255,255,255,0.4);gap:4px
+}
+.lobby-slot.filled{border-style:solid;border-color:rgba(255,255,255,0.6);color:#fff;background:rgba(255,255,255,0.05)}
+.lobby-cat{font-size:28px;line-height:1}
+.lobby-name{font-size:6px;max-width:60px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center}
+.lobby-badge{font-size:5px;padding:2px 4px;background:var(--accent);color:#fff}
+.input-row{display:flex;gap:8px}
+.px-input{
+  font-family:'Press Start 2P',monospace;font-size:10px;padding:8px 12px;flex:1;
+  background:rgba(0,0,0,0.3);border:2px solid rgba(255,255,255,0.3);color:#fff;outline:none
+}
+.px-input:focus{border-color:var(--c2)}
+.px-input::placeholder{color:rgba(255,255,255,0.3)}
+.section-label{font-size:8px;color:var(--c3);margin-bottom:4px}
+
+#cosmetics-screen{
+  position:absolute;inset:0;background:var(--bg);z-index:200;display:none;
+  flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:20px
+}
+.cosm-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;max-height:200px;overflow-y:auto}
+.cosm-item{
+  aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  border:2px solid rgba(255,255,255,0.2);cursor:pointer;gap:4px;padding:6px;
+  transition:transform 0.1s;font-size:7px;color:rgba(255,255,255,0.6)
+}
+.cosm-item:hover{transform:scale(1.1);border-color:var(--c2)}
+.cosm-item.selected{border-color:var(--c2);background:rgba(255,230,109,0.1)}
+.cosm-icon{font-size:24px;line-height:1}
+.preview-cat{
+  width:80px;height:80px;display:flex;align-items:center;justify-content:center;
+  font-size:48px;border:3px solid var(--c2);background:rgba(0,0,0,0.3);position:relative
+}
+.preview-hat{position:absolute;top:-12px;left:50%;transform:translateX(-50%);font-size:20px}
+
+#result-screen{
+  position:absolute;inset:0;background:rgba(0,0,0,0.9);z-index:200;display:none;
+  flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:20px
+}
+.result-box{
+  background:var(--panel);border:3px solid var(--c2);padding:20px;width:min(500px,95vw);
+  display:flex;flex-direction:column;gap:10px
+}
+.result-title{font-size:clamp(12px,3vw,24px);color:var(--c2);text-align:center}
+.result-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.1);font-size:8px;color:#fff}
+.result-val{color:var(--c3)}
+.result-val.bad{color:var(--c1)}
+.winner-badge{background:var(--c2);color:var(--bg);padding:2px 6px;font-size:6px}
+
+#login-screen{
+  position:absolute;inset:0;background:var(--bg);z-index:300;display:flex;
+  flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:20px
+}
+
+#toast{
+  position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
+  background:var(--panel);border:2px solid var(--c2);color:var(--c2);
+  font-family:'Press Start 2P',monospace;font-size:9px;padding:10px 20px;
+  z-index:999;opacity:0;transition:opacity 0.3s;pointer-events:none
+}
+#toast.show{opacity:1}
+
+.dead-overlay{
+  position:absolute;font-size:32px;animation:pop 0.5s ease-out;pointer-events:none;z-index:60
+}
+
+#mobile-btns{
+  position:fixed;bottom:0;left:0;right:0;display:none;
+  background:rgba(0,0,0,0.8);border-top:2px solid var(--c2);
+  padding:12px;gap:12px;justify-content:space-between;align-items:center;z-index:55
+}
+@media(max-width:768px){#mobile-btns{display:flex}}
+.mob-btn{
+  font-family:'Press Start 2P',monospace;font-size:18px;padding:16px 24px;
+  background:rgba(255,255,255,0.1);border:3px solid rgba(255,255,255,0.4);
+  color:#fff;cursor:pointer;border-radius:4px;user-select:none;-webkit-tap-highlight-color:transparent
+}
+.mob-btn:active{background:rgba(255,255,255,0.3)}
+
+.divider{border:none;border-top:1px solid rgba(255,255,255,0.1);margin:4px 0}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="logo">🐱 NYANKO</div>
+  <div class="logo-sub">PARTY ONLINE</div>
+  <div style="display:flex;gap:12px;margin:8px 0;font-size:28px">
+    <span style="animation:bounce 0.6s infinite alternate">🐱</span>
+    <span style="animation:bounce 0.6s 0.2s infinite alternate">🐱</span>
+    <span style="animation:bounce 0.6s 0.4s infinite alternate">🐱</span>
+  </div>
+  <div class="lobby-box" style="max-width:340px;gap:10px">
+    <div class="lobby-title">INICIAR SESIÓN</div>
+    <div>
+      <div class="section-label">USUARIO</div>
+      <input class="px-input" id="login-user" placeholder="admin" value="admin" style="width:100%">
+    </div>
+    <div>
+      <div class="section-label">CONTRASEÑA</div>
+      <input class="px-input" id="login-pass" type="password" placeholder="admin123" value="admin123" style="width:100%">
+    </div>
+    <button class="btn btn-primary" id="btn-login">▶ ENTRAR</button>
+    <button class="btn btn-ghost" id="btn-register-show">+ CREAR CUENTA</button>
+    <div style="font-size:7px;color:rgba(255,255,255,0.4);text-align:center">
+      ADMIN: admin / admin123
+    </div>
+  </div>
+</div>
+
+<!-- MAIN MENU -->
+<div id="main-menu" style="display:none">
+  <div class="logo">🐱 NYANKO PARTY</div>
+  <div class="logo-sub">COOPERATIVE PUZZLE GAME</div>
+  <div class="menu-cats">
+    <span class="menu-cat">🐱</span><span class="menu-cat">🐱</span>
+    <span class="menu-cat">🐱</span><span class="menu-cat">🐱</span>
+    <span class="menu-cat">🐱</span>
+  </div>
+  <div id="welcome-msg" style="font-size:9px;color:var(--c3);margin:8px 0"></div>
+  <button class="btn btn-primary" id="btn-create-room">🏠 CREAR SALA</button>
+  <button class="btn btn-secondary" id="btn-join-room">🚪 UNIRSE A SALA</button>
+  <button class="btn btn-yellow" id="btn-solo">⚡ JUGAR SOLO (BOTS)</button>
+  <button class="btn btn-ghost" id="btn-cosmetics">🎨 PERSONALIZAR</button>
+  <button class="btn btn-ghost" id="btn-stats">📊 ESTADÍSTICAS</button>
+  <div style="font-size:7px;color:rgba(255,255,255,0.3);margin-top:8px">
+    ABRE MÚLTIPLES PESTAÑAS PARA PROBAR MULTIPLAYER
+  </div>
+</div>
+
+<!-- ROOM LOBBY -->
+<div id="room-lobby">
+  <div class="lobby-box">
+    <div class="lobby-title" id="lobby-title">SALA DE ESPERA</div>
+    <div class="lobby-code" id="lobby-code">----</div>
+    <div style="font-size:7px;color:rgba(255,255,255,0.5);text-align:center">COMPARTE ESTE CÓDIGO CON TUS AMIGOS</div>
+    <div class="lobby-players" id="lobby-players"></div>
+    <div class="divider"></div>
+    <div id="lobby-join-row" style="display:none">
+      <div class="section-label">CÓDIGO DE SALA</div>
+      <div class="input-row">
+        <input class="px-input" id="room-code-input" placeholder="XXXX" maxlength="4" style="text-transform:uppercase;letter-spacing:4px;font-size:16px">
+        <button class="btn btn-secondary" id="btn-do-join" style="min-width:auto;font-size:9px;padding:8px 12px">UNIRSE</button>
+      </div>
+    </div>
+    <button class="btn btn-primary" id="btn-start-game" style="display:none">▶ INICIAR JUEGO</button>
+    <button class="btn btn-ghost" id="btn-add-bot" style="font-size:8px;padding:8px">🤖 + AGREGAR BOT</button>
+    <button class="btn btn-danger" id="btn-leave-room" style="font-size:8px;padding:8px">✕ SALIR</button>
+  </div>
+</div>
+
+<!-- COSMETICS -->
+<div id="cosmetics-screen">
+  <div class="lobby-box" style="max-width:400px">
+    <div class="lobby-title">🎨 PERSONALIZAR GATITO</div>
+    <div style="display:flex;gap:16px;align-items:center;justify-content:center">
+      <div>
+        <div class="preview-cat" id="preview-cat">
+          <span id="preview-hat" class="preview-hat"></span>
+          🐱
+        </div>
+        <div style="font-size:7px;color:var(--c3);text-align:center;margin-top:8px" id="preview-name">GATITO</div>
+      </div>
+      <div style="flex:1">
+        <div class="section-label">NOMBRE</div>
+        <input class="px-input" id="cosmetic-name" style="width:100%;font-size:9px" maxlength="12" placeholder="TU NOMBRE">
+      </div>
+    </div>
+    <div class="section-label" style="margin-top:8px">SOMBRERO</div>
+    <div class="cosm-grid" id="hat-grid"></div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button class="btn btn-primary" id="btn-save-cosm" style="flex:1;font-size:8px;padding:10px">✓ GUARDAR</button>
+      <button class="btn btn-ghost" id="btn-back-cosm" style="flex:1;font-size:8px;padding:10px">← VOLVER</button>
+    </div>
+  </div>
+</div>
+
+<!-- RESULT SCREEN -->
+<div id="result-screen">
+  <div class="result-box">
+    <div class="result-title">🎉 ¡NIVEL COMPLETADO!</div>
+    <div id="result-stars" style="text-align:center;font-size:24px;margin:8px 0">⭐⭐⭐</div>
+    <div id="result-rows"></div>
+    <div class="divider"></div>
+    <div class="result-row">
+      <span>TIEMPO TOTAL</span>
+      <span class="result-val" id="result-time">0:00</span>
+    </div>
+    <div class="result-row">
+      <span>INTENTOS</span>
+      <span class="result-val" id="result-attempts">1</span>
+    </div>
+    <div class="result-row">
+      <span>MAYOR DESTRUCTOR 💀</span>
+      <span class="result-val bad" id="result-worst"></span>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button class="btn btn-primary" id="btn-play-again" style="flex:1;font-size:8px;padding:10px">↺ JUGAR DE NUEVO</button>
+      <button class="btn btn-ghost" id="btn-menu-result" style="flex:1;font-size:8px;padding:10px">⌂ MENÚ</button>
+    </div>
+  </div>
+</div>
+
+<!-- GAME CANVAS -->
+<div id="game-container"></div>
+
+<!-- HUD -->
+<div id="hud">
+  <div class="hud-players" id="hud-players"></div>
+  <div class="hud-timer" id="hud-timer">0:00</div>
+  <div class="hud-room" id="hud-room"></div>
+</div>
+
+<!-- MOBILE CONTROLS -->
+<div id="mobile-btns">
+  <button class="mob-btn" id="mob-left">◀</button>
+  <div style="display:flex;gap:8px">
+    <button class="mob-btn" id="mob-jump" style="background:rgba(255,230,109,0.2)">▲</button>
+  </div>
+  <button class="mob-btn" id="mob-right">▶</button>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ==================== GAME STATE ====================
+const CATS = ['🐱','😸','😺','😻','😼','🙀','😾','😿'];
+const HATS = [
+  {id:'none',icon:'',name:'NINGUNO'},
+  {id:'top',icon:'🎩',name:'SOMBRERO'},
+  {id:'party',icon:'🎉',name:'FIESTA'},
+  {id:'crown',icon:'👑',name:'CORONA'},
+  {id:'bow',icon:'🎀',name:'MOÑO'},
+  {id:'cap',icon:'🧢',name:'GORRA'},
+  {id:'wizard',icon:'🧙',name:'MAGO'},
+  {id:'cowboy',icon:'🤠',name:'VAQUERO'},
+  {id:'santa',icon:'🎅',name:'PAPA NOEL'},
+  {id:'flower',icon:'🌸',name:'FLOR'},
+];
+const COLORS = ['#FF6B6B','#FFE66D','#4ECDC4','#45B7D1','#96CEB4','#FF8B94','#A8E6CF','#DDA0DD'];
+const COLOR_NAMES = ['Rojo','Amarillo','Teal','Azul','Verde','Rosa','Menta','Lila'];
+
+let localState = {
+  loggedIn: false,
+  username: '',
+  hat: 'none',
+  color: COLORS[0],
+  stats: {played:0, deaths:0, time:0, wins:0},
+  roomId: null,
+  isHost: false,
+  playerId: null,
+  playerIndex: 0,
+};
+
+// BroadcastChannel for cross-tab multiplayer
+let bc = null;
+let roomChannel = null;
+
+// All accounts DB (localStorage)
+function getAccounts(){
+  try{return JSON.parse(localStorage.getItem('nyanko_accounts')||'{}')}catch{return{}}
+}
+function saveAccounts(a){localStorage.setItem('nyanko_accounts',JSON.stringify(a))}
+function initAdminAccount(){
+  const accounts = getAccounts();
+  if(!accounts.admin){
+    accounts.admin = {
+      password:'admin123',
+      hat:'crown',
+      color:COLORS[0],
+      stats:{played:42,deaths:137,time:3600,wins:18},
+      createdAt:Date.now()
+    };
+    saveAccounts(accounts);
+  }
+}
+initAdminAccount();
+
+function login(user,pass){
+  const acc = getAccounts();
+  if(acc[user] && acc[user].password === pass){
+    localState.loggedIn=true;
+    localState.username=user;
+    localState.hat=acc[user].hat||'none';
+    localState.color=acc[user].color||COLORS[0];
+    localState.stats=acc[user].stats||{played:0,deaths:0,time:0,wins:0};
+    localState.playerId='p_'+user+'_'+Math.random().toString(36).slice(2,6);
+    return true;
+  }
+  return false;
+}
+function register(user,pass){
+  if(!user||!pass||user.length<2)return'Nombre demasiado corto';
+  if(pass.length<4)return'Contraseña muy corta';
+  const acc=getAccounts();
+  if(acc[user])return'Usuario ya existe';
+  acc[user]={password:pass,hat:'none',color:COLORS[Math.floor(Math.random()*COLORS.length)],stats:{played:0,deaths:0,time:0,wins:0},createdAt:Date.now()};
+  saveAccounts(acc);
+  return null;
+}
+function saveProfile(){
+  const acc=getAccounts();
+  if(acc[localState.username]){
+    acc[localState.username].hat=localState.hat;
+    acc[localState.username].color=localState.color;
+    acc[localState.username].stats=localState.stats;
+    saveAccounts(acc);
+  }
+}
+
+// ==================== ROOM SYSTEM ====================
+let roomState = {
+  id: null,
+  players: [],
+  hostId: null,
+  started: false,
+};
+
+function getRooms(){
+  try{return JSON.parse(localStorage.getItem('nyanko_rooms')||'{}')}catch{return{}}
+}
+function saveRooms(r){localStorage.setItem('nyanko_rooms',JSON.stringify(r))}
+
+function createRoom(){
+  const code = (Math.random()*9000+1000|0).toString();
+  const rooms=getRooms();
+  const me = makePlayerObj();
+  me.isHost=true;
+  rooms[code]={
+    id:code, players:[me], hostId:localState.playerId,
+    started:false, created:Date.now(), lastPing:Date.now()
+  };
+  saveRooms(rooms);
+  localState.roomId=code;
+  localState.isHost=true;
+  localState.playerIndex=0;
+  roomState=rooms[code];
+  setupBroadcast(code);
+  return code;
+}
+
+function joinRoom(code){
+  const rooms=getRooms();
+  if(!rooms[code])return'Sala no encontrada';
+  if(rooms[code].started)return'El juego ya empezó';
+  if(rooms[code].players.length>=8)return'Sala llena';
+  const me=makePlayerObj();
+  me.isHost=false;
+  const idx=rooms[code].players.length;
+  // Assign unique color
+  const usedColors=rooms[code].players.map(p=>p.color);
+  me.color=COLORS.find(c=>!usedColors.includes(c))||COLORS[idx%COLORS.length];
+  rooms[code].players.push(me);
+  rooms[code].lastPing=Date.now();
+  saveRooms(rooms);
+  localState.roomId=code;
+  localState.isHost=false;
+  localState.playerIndex=idx;
+  localState.color=me.color;
+  roomState=rooms[code];
+  setupBroadcast(code);
+  return null;
+}
+
+function makePlayerObj(){
+  return {
+    id:localState.playerId,
+    username:localState.username,
+    hat:localState.hat,
+    color:localState.color,
+    isBot:false,
+    deaths:0,
+    isHost:localState.isHost,
+    joinedAt:Date.now()
+  };
+}
+
+function addBot(roomId){
+  const rooms=getRooms();
+  if(!rooms[roomId])return;
+  const botNames=['Bot🤖','Miau🐾','Kitty💤','Neko⚡','Paws🌟'];
+  const idx=rooms[roomId].players.length;
+  if(idx>=8)return;
+  const usedColors=rooms[roomId].players.map(p=>p.color);
+  const botColor=COLORS.find(c=>!usedColors.includes(c))||COLORS[idx%COLORS.length];
+  const bot={
+    id:'bot_'+Math.random().toString(36).slice(2,6),
+    username:botNames[idx%botNames.length],
+    hat:HATS[Math.floor(Math.random()*HATS.length)].id,
+    color:botColor,
+    isBot:true,deaths:0,isHost:false,joinedAt:Date.now()
+  };
+  rooms[roomId].players.push(bot);
+  rooms[roomId].lastPing=Date.now();
+  saveRooms(rooms);
+  roomState=rooms[roomId];
+  broadcastRoomUpdate();
+}
+
+function setupBroadcast(roomId){
+  if(roomChannel)roomChannel.close();
+  try{
+    roomChannel=new BroadcastChannel('nyanko_room_'+roomId);
+    roomChannel.onmessage=e=>{
+      const msg=e.data;
+      if(msg.type==='room_update'){
+        roomState=msg.room;
+        updateLobbyUI();
+      }else if(msg.type==='game_start'){
+        roomState=msg.room;
+        startGame();
+      }else if(msg.type==='game_state'){
+        if(phaserGame)phaserGame.events.emit('remote_state',msg.state);
+      }else if(msg.type==='player_died'){
+        if(phaserGame)phaserGame.events.emit('player_died_remote',msg);
+      }else if(msg.type==='level_complete'){
+        if(phaserGame)phaserGame.events.emit('level_complete_remote',msg);
+      }
+    };
+  }catch(e){console.log('BroadcastChannel not supported')}
+}
+
+function broadcastRoomUpdate(){
+  const rooms=getRooms();
+  if(localState.roomId && rooms[localState.roomId]){
+    rooms[localState.roomId].lastPing=Date.now();
+    saveRooms(rooms);
+    roomState=rooms[localState.roomId];
+  }
+  if(roomChannel)roomChannel.postMessage({type:'room_update',room:roomState});
+  updateLobbyUI();
+}
+
+function broadcastGameStart(){
+  const rooms=getRooms();
+  if(localState.roomId && rooms[localState.roomId]){
+    rooms[localState.roomId].started=true;
+    saveRooms(rooms);
+    roomState=rooms[localState.roomId];
+  }
+  if(roomChannel)roomChannel.postMessage({type:'game_start',room:roomState});
+}
+
+function broadcastGameState(state){
+  if(roomChannel)roomChannel.postMessage({type:'game_state',state});
+}
+
+// ==================== UI MANAGEMENT ====================
+function showScreen(id){
+  ['main-menu','room-lobby','cosmetics-screen','result-screen','login-screen'].forEach(s=>{
+    document.getElementById(s).style.display='none';
+  });
+  if(id) document.getElementById(id).style.display='flex';
+}
+
+function showToast(msg,duration=2500){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),duration);
+}
+
+function updateLobbyUI(){
+  const rooms=getRooms();
+  const room=localState.roomId?rooms[localState.roomId]:null;
+  if(!room) return;
+  document.getElementById('lobby-code').textContent=room.id;
+  document.getElementById('lobby-title').textContent=localState.isHost?'SALA DE ESPERA (HOST)':'SALA DE ESPERA';
+  const startBtn=document.getElementById('btn-start-game');
+  startBtn.style.display=localState.isHost && room.players.length>=1 ?'block':'none';
+
+  const grid=document.getElementById('lobby-players');
+  grid.innerHTML='';
+  for(let i=0;i<8;i++){
+    const slot=document.createElement('div');
+    const p=room.players[i];
+    if(p){
+      slot.className='lobby-slot filled';
+      slot.style.borderColor=p.color;
+      const hatEmoji=HATS.find(h=>h.id===p.hat)?.icon||'';
+      slot.innerHTML=`
+        <div class="lobby-cat" style="position:relative">
+          <span style="position:absolute;top:-8px;left:50%;transform:translateX(-50%);font-size:12px">${hatEmoji}</span>
+          🐱
+        </div>
+        <div class="lobby-name" style="color:${p.color}">${p.username}</div>
+        ${p.isHost?'<div class="lobby-badge">HOST</div>':''}
+        ${p.isBot?'<div class="lobby-badge" style="background:var(--c3);color:var(--bg)">BOT</div>':''}
+      `;
+    }else{
+      slot.className='lobby-slot';
+      slot.innerHTML='<div style="font-size:20px;opacity:0.3">+</div><div>LIBRE</div>';
+    }
+    grid.appendChild(slot);
+  }
+}
+
+// Hat grid
+function buildHatGrid(){
+  const grid=document.getElementById('hat-grid');
+  grid.innerHTML='';
+  HATS.forEach(h=>{
+    const div=document.createElement('div');
+    div.className='cosm-item'+(localState.hat===h.id?' selected':'');
+    div.innerHTML=`<div class="cosm-icon">${h.icon||'🚫'}</div><div>${h.name}</div>`;
+    div.onclick=()=>{
+      localState.hat=h.id;
+      document.getElementById('preview-hat').textContent=h.icon;
+      grid.querySelectorAll('.cosm-item').forEach(el=>el.classList.remove('selected'));
+      div.classList.add('selected');
+    };
+    grid.appendChild(div);
+  });
+}
+
+function updateHUD(){
+  const rooms=getRooms();
+  const room=localState.roomId?rooms[localState.roomId]:roomState;
+  if(!room)return;
+  const hud=document.getElementById('hud-players');
+  hud.innerHTML='';
+  (room.players||[]).forEach(p=>{
+    const div=document.createElement('div');
+    div.className='hud-player';
+    const hat=HATS.find(h=>h.id===p.hat)?.icon||'';
+    div.innerHTML=`<div class="hud-dot" style="background:${p.color}"></div><span style="color:${p.color}">${p.username.slice(0,8)}</span> ${hat}<div class="hud-deaths">💀${p.deaths||0}</div>`;
+    hud.appendChild(div);
+  });
+  document.getElementById('hud-room').textContent='SALA: '+(localState.roomId||'LOCAL');
+}
+
+// ==================== PHASER GAME ====================
+let phaserGame = null;
+let gameTimer = 0;
+let gameAttempts = 0;
+let gameTimerInterval = null;
+
+function startGame(){
+  showScreen(null);
+  document.getElementById('game-container').style.display='block';
+  document.getElementById('hud').style.display='flex';
+
+  const rooms=getRooms();
+  const room=localState.roomId?rooms[localState.roomId]:roomState;
+  const players=room?room.players:[makePlayerObj()];
+
+  updateHUD();
+  gameAttempts++;
+  gameTimer=0;
+  if(gameTimerInterval)clearInterval(gameTimerInterval);
+  gameTimerInterval=setInterval(()=>{
+    gameTimer++;
+    const m=Math.floor(gameTimer/60);
+    const s=gameTimer%60;
+    document.getElementById('hud-timer').textContent=`${m}:${s.toString().padStart(2,'0')}`;
+  },1000);
+
+  if(phaserGame){phaserGame.destroy(true)}
+
+  const W=window.innerWidth;
+  const H=window.innerHeight - (window.innerWidth<=768?80:0);
+  const isMobile=window.innerWidth<=768;
+
+  phaserGame = new Phaser.Game({
+    type: Phaser.AUTO,
+    width: W,
+    height: H,
+    parent: 'game-container',
+    backgroundColor: '#1a1a2e',
+    physics:{
+      default:'arcade',
+      arcade:{gravity:{y:800},debug:false}
+    },
+    scene: {
+      key:'GameScene',
+      preload: preload,
+      create: function(){createScene.call(this,players,isMobile)},
+      update: updateScene
+    }
+  });
+}
+
+// Asset generation via canvas
+function makePixel(color,size=32){
+  const c=document.createElement('canvas');
+  c.width=size;c.height=size;
+  const ctx=c.getContext('2d');
+  ctx.fillStyle=color;
+  ctx.fillRect(0,0,size,size);
+  // face
+  ctx.fillStyle='rgba(0,0,0,0.5)';
+  ctx.fillRect(size*0.25,size*0.3,size*0.15,size*0.15);
+  ctx.fillRect(size*0.6,size*0.3,size*0.15,size*0.15);
+  ctx.fillRect(size*0.35,size*0.55,size*0.3,size*0.1);
+  // ears
+  ctx.fillStyle=color;
+  ctx.beginPath();
+  ctx.moveTo(size*0.1,-2);ctx.lineTo(size*0.3,size*0.15);ctx.lineTo(size*0,-2);ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(size*0.7,-2);ctx.lineTo(size*0.9,-2);ctx.lineTo(size*0.7,size*0.15);ctx.fill();
+  return c.toDataURL();
+}
+
+function makeBlock(color){
+  const c=document.createElement('canvas');
+  c.width=32;c.height=32;
+  const ctx=c.getContext('2d');
+  ctx.fillStyle=color;
+  ctx.fillRect(0,0,32,32);
+  ctx.strokeStyle='rgba(255,255,255,0.3)';
+  ctx.lineWidth=1;
+  ctx.strokeRect(1,1,30,30);
+  return c.toDataURL();
+}
+
+function preload(){
+  // Generate textures via canvas
+  COLORS.forEach((col,i)=>{
+    this.textures.addBase64('cat'+i,makePixel(col));
+    this.textures.addBase64('cat_dead'+i,makePixel(col+'88'));
+  });
+  this.textures.addBase64('platform',makeBlock('#4a4a8a'));
+  this.textures.addBase64('platform_move',makeBlock('#2d8a4a'));
+  this.textures.addBase64('platform_fall',makeBlock('#8a2d2d'));
+  this.textures.addBase64('key_tile',makeBlock('#FFE66D'));
+  this.textures.addBase64('door_closed',makeBlock('#e94560'));
+  this.textures.addBase64('door_open',makeBlock('#4ECDC4'));
+  this.textures.addBase64('switch_off',makeBlock('#888888'));
+  this.textures.addBase64('switch_on',makeBlock('#96CEB4'));
+  this.textures.addBase64('spike',makeBlock('#FF6B6B'));
+  this.textures.addBase64('goal',makeBlock('#FFE66D'));
+  this.textures.addBase64('bg_tile',makeBlock('#16213e'));
+}
+
+// ==================== MAIN GAME SCENE ====================
+let sceneRef = null;
+
+function createScene(players,isMobile){
+  sceneRef=this;
+  this.players=players;
+  this.localPlayerIdx=localState.playerIndex;
+  this.gameOver=false;
+  this.levelComplete=false;
+  this.hasKey=false;
+  this.doorOpen=false;
+  this.switchesOn=0;
+  this.totalSwitches=2;
+  this.deaths={};
+  players.forEach(p=>this.deaths[p.id]=0);
+
+  // ---- LEVEL DESIGN ----
+  // World size
+  this.worldW=1600;
+  this.worldH=800;
+  this.cameras.main.setBounds(0,0,this.worldW,this.worldH);
+  this.physics.world.setBounds(0,0,this.worldW,this.worldH);
+
+  // Background
+  this.add.rectangle(this.worldW/2,this.worldH/2,this.worldW,this.worldH,0x1a1a2e);
+  // Grid bg
+  for(let x=0;x<this.worldW;x+=64)for(let y=0;y<this.worldH;y+=64){
+    this.add.rectangle(x+32,y+32,62,62,0x16213e).setAlpha(0.5);
+  }
+
+  // ---- PLATFORMS ----
+  this.platforms=this.physics.add.staticGroup();
+  const platData=[
+    // Ground floor
+    {x:0,y:780,w:400,h:20,c:0x4a4a8a},
+    {x:500,y:780,w:300,h:20,c:0x4a4a8a},
+    {x:900,y:780,w:300,h:20,c:0x4a4a8a},
+    {x:1300,y:780,w:300,h:20,c:0x4a4a8a},
+    // Lower platforms
+    {x:150,y:660,w:120,h:16,c:0x4a4a8a},
+    {x:380,y:620,w:100,h:16,c:0x4a4a8a},
+    {x:600,y:580,w:80,h:16,c:0x4a4a8a},
+    // Mid section
+    {x:750,y:520,w:200,h:16,c:0x4a4a8a},
+    {x:1000,y:460,w:120,h:16,c:0x4a4a8a},
+    // High section
+    {x:1150,y:380,w:100,h:16,c:0x4a4a8a},
+    {x:1300,y:320,w:200,h:16,c:0x4a4a8a},
+    // Stacking zone - need multiple players to reach
+    {x:450,y:420,w:80,h:16,c:0x2d8a4a},// green = stack zone
+    // Wall platforms
+    {x:0,y:400,w:16,h:800,c:0x4a4a8a},
+    {x:this.worldW-8,y:400,w:16,h:800,c:0x4a4a8a},
+    // Ceiling zone
+    {x:200,y:0,w:this.worldW-200,h:16,c:0x4a4a8a},
+  ];
+  platData.forEach(p=>{
+    const r=this.add.rectangle(p.x,p.y,p.w,p.h,p.c);
+    this.physics.add.existing(r,true);
+    this.platforms.add(r);
+  });
+
+  // Moving platform
+  this.movingPlat=this.add.rectangle(700,700,96,16,0x2d8a4a);
+  this.physics.add.existing(this.movingPlat);
+  this.movingPlat.body.allowGravity=false;
+  this.movingPlat.body.immovable=true;
+  this.movingPlatDir=1;
+
+  // Falling platform
+  this.fallingPlat=this.add.rectangle(1100,600,80,16,0x8a2d2d);
+  this.physics.add.existing(this.fallingPlat,true);
+  this.fallingPlatTriggered=false;
+
+  // ---- SPIKES ----
+  this.spikes=this.physics.add.staticGroup();
+  const spikePos=[
+    {x:450,y:775},{x:482,y:775},{x:514,y:775},
+    {x:900,y:775},{x:932,y:775},
+    {x:1200,y:775},{x:1232,y:775},{x:1264,y:775},
+  ];
+  spikePos.forEach(s=>{
+    const spike=this.add.triangle(s.x,s.y,0,12,-6,-4,6,-4,0xFF6B6B);
+    // Use rectangle for physics
+    const spikeBody=this.add.rectangle(s.x,s.y,12,8,0xFF6B6B,0);
+    this.physics.add.existing(spikeBody,true);
+    this.spikes.add(spikeBody);
+  });
+
+  // ---- KEY ----
+  this.keyObj=this.physics.add.sprite(500,440,'key_tile');
+  this.keyObj.setScale(0.8);
+  this.keyObj.body.allowGravity=false;
+  this.keyText=this.add.text(500,415,'🗝️',{fontSize:'22px'}).setOrigin(0.5);
+  this.keyLabel=this.add.text(500,400,'LLAVE',{fontFamily:'monospace',fontSize:'8px',color:'#FFE66D'}).setOrigin(0.5);
+  // Floating animation
+  this.tweens.add({targets:[this.keyObj,this.keyText,this.keyLabel],y:'-=8',duration:800,yoyo:true,repeat:-1,ease:'Sine.easeInOut'});
+
+  // ---- DOOR ----
+  this.door=this.physics.add.sprite(1400,700,'door_closed');
+  this.door.setScale(1.5);
+  this.door.body.allowGravity=false;
+  this.door.body.immovable=true;
+  this.doorText=this.add.text(1400,655,'🚪',{fontSize:'28px'}).setOrigin(0.5);
+  this.doorLabel=this.add.text(1400,640,'META',{fontFamily:'monospace',fontSize:'8px',color:'#e94560'}).setOrigin(0.5);
+
+  // ---- SWITCHES ----
+  this.switches=[];
+  [{x:300,y:640},{x:1050,y:440}].forEach((pos,i)=>{
+    const sw=this.physics.add.sprite(pos.x,pos.y,'switch_off');
+    sw.body.allowGravity=false;
+    sw.body.immovable=true;
+    sw.switchIdx=i;
+    sw.isOn=false;
+    const label=this.add.text(pos.x,pos.y-20,'⬛',{fontSize:'18px'}).setOrigin(0.5);
+    sw.label=label;
+    const txt=this.add.text(pos.x,pos.y-34,'SWITCH',{fontFamily:'monospace',fontSize:'7px',color:'#888'}).setOrigin(0.5);
+    sw.txt=txt;
+    this.switches.push(sw);
+  });
+
+  // Switch info
+  this.switchInfo=this.add.text(this.worldW/2,50,'🔲 ACTIVA LOS 2 INTERRUPTORES PARA ABRIR LA PUERTA',
+    {fontFamily:'monospace',fontSize:'9px',color:'rgba(255,255,255,0.6)',align:'center'}).setOrigin(0.5).setScrollFactor(0);
+  this.keyInfo=this.add.text(this.worldW/2,70,'🗝️ RECOGE LA LLAVE PARA COMPLETAR EL NIVEL',
+    {fontFamily:'monospace',fontSize:'9px',color:'rgba(255,255,255,0.6)',align:'center'}).setOrigin(0.5).setScrollFactor(0);
+
+  // ---- COOPERATIVE ZONE ----
+  // Sign for stacking area
+  const stackSign=this.add.text(450,395,'⬆️ APÍLENSE AQUÍ',
+    {fontFamily:'monospace',fontSize:'8px',color:'#96CEB4',backgroundColor:'rgba(0,0,0,0.5)',padding:{x:4,y:2}}).setOrigin(0.5);
+
+  // ---- PLAYERS ----
+  this.playerSprites=[];
+  this.playerNames=[];
+  this.playerHats=[];
+  this.playerInputs={};
+
+  players.forEach((p,i)=>{
+    const sprite=this.physics.add.sprite(60+i*40,720,'cat'+i);
+    sprite.setCollideWorldBounds(true);
+    sprite.setBounce(0.05);
+    sprite.setScale(1);
+    sprite.playerData=p;
+    sprite.playerIdx=i;
+    sprite.isDead=false;
+    sprite.isOnGround=false;
+    sprite.jumpCooldown=0;
+    sprite.wasOnMovingPlat=false;
+
+    // Name tag
+    const nameTag=this.add.text(0,0,p.username.slice(0,8),
+      {fontFamily:'monospace',fontSize:'7px',color:p.color,stroke:'#000',strokeThickness:2}).setOrigin(0.5);
+    const hatEmoji=HATS.find(h=>h.id===p.hat)?.icon||'';
+    const hatTag=this.add.text(0,0,hatEmoji,{fontSize:'12px'}).setOrigin(0.5);
+
+    this.playerSprites.push(sprite);
+    this.playerNames.push(nameTag);
+    this.playerHats.push(hatTag);
+    this.playerInputs[i]={left:false,right:false,jump:false};
+
+    // Colliders
+    this.physics.add.collider(sprite,this.platforms);
+  });
+
+  // Local player camera follow
+  if(this.playerSprites[this.localPlayerIdx]){
+    this.cameras.main.startFollow(this.playerSprites[this.localPlayerIdx],true,0.1,0.1);
+  }
+
+  // ---- KEYBOARD ----
+  this.cursors=this.input.keyboard.createCursorKeys();
+  this.wasd={
+    left:this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A),
+    right:this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D),
+    up:this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.W),
+    space:this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE)
+  };
+
+  // Mobile touch
+  if(isMobile) setupMobileControls.call(this);
+
+  // Remote state sync
+  this.remotePlayers={};
+  phaserGame.events.on('remote_state',state=>{
+    if(state.playerIdx !== this.localPlayerIdx){
+      this.remotePlayers[state.playerIdx]=state;
+    }
+  });
+
+  phaserGame.events.on('player_died_remote',msg=>{
+    this.deaths[msg.playerId]=(this.deaths[msg.playerId]||0)+1;
+    updateHUD();
+  });
+
+  phaserGame.events.on('level_complete_remote',()=>{
+    if(!this.levelComplete)this.triggerLevelComplete();
+  });
+
+  // State broadcast interval
+  this.syncTimer=0;
+
+  // ---- UI LABELS ----
+  this.coordLabel=this.add.text(10,10,'',{fontFamily:'monospace',fontSize:'8px',color:'rgba(255,255,255,0.4)'}).setScrollFactor(0);
+
+  // Death overlay group
+  this.deadTexts=[];
+}
+
+function setupMobileControls(){
+  const leftBtn=document.getElementById('mob-left');
+  const rightBtn=document.getElementById('mob-right');
+  const jumpBtn=document.getElementById('mob-jump');
+  const lp=this.localPlayerIdx;
+  const setKey=(side,val)=>{this.playerInputs[lp][side]=val};
+  leftBtn.addEventListener('touchstart',e=>{e.preventDefault();setKey('left',true)},{passive:false});
+  leftBtn.addEventListener('touchend',e=>{e.preventDefault();setKey('left',false)},{passive:false});
+  rightBtn.addEventListener('touchstart',e=>{e.preventDefault();setKey('right',true)},{passive:false});
+  rightBtn.addEventListener('touchend',e=>{e.preventDefault();setKey('right',false)},{passive:false});
+  jumpBtn.addEventListener('touchstart',e=>{e.preventDefault();setKey('jump',true)},{passive:false});
+  jumpBtn.addEventListener('touchend',e=>{e.preventDefault();setKey('jump',false)},{passive:false});
+}
+
+function updateScene(time,delta){
+  if(this.gameOver || this.levelComplete) return;
+
+  const lp=this.localPlayerIdx;
+  const localSprite=this.playerSprites[lp];
+  if(!localSprite)return;
+
+  // ---- INPUT ----
+  const left=(this.cursors.left.isDown||this.wasd.left.isDown||this.playerInputs[lp].left);
+  const right=(this.cursors.right.isDown||this.wasd.right.isDown||this.playerInputs[lp].right);
+  const jump=(this.cursors.up.isDown||this.wasd.up.isDown||this.cursors.space.isDown||this.wasd.space.isDown||this.playerInputs[lp].jump);
+
+  if(!localSprite.isDead){
+    const speed=220;
+    if(left){localSprite.setVelocityX(-speed);localSprite.setFlipX(true)}
+    else if(right){localSprite.setVelocityX(speed);localSprite.setFlipX(false)}
+    else{localSprite.setVelocityX(0)}
+
+    const onGround=localSprite.body.blocked.down;
+    if((jump) && onGround && localSprite.jumpCooldown<=0){
+      localSprite.setVelocityY(-580);
+      localSprite.jumpCooldown=15;
+    }
+    if(localSprite.jumpCooldown>0)localSprite.jumpCooldown--;
+  }
+
+  // ---- MOVING PLATFORM ----
+  const mp=this.movingPlat;
+  mp.x+=this.movingPlatDir*1.5;
+  if(mp.x>850)this.movingPlatDir=-1;
+  if(mp.x<550)this.movingPlatDir=1;
+  mp.body.reset(mp.x,mp.y);
+  // Carry players on moving platform
+  this.playerSprites.forEach(s=>{
+    if(s.isDead)return;
+    const onPlat=Phaser.Geom.Rectangle.Overlaps(
+      new Phaser.Geom.Rectangle(s.x-16,s.y+14,32,4),
+      new Phaser.Geom.Rectangle(mp.x-48,mp.y-8,96,8)
+    );
+    if(onPlat && s.body.blocked.down){
+      s.x+=this.movingPlatDir*1.5;
+    }
+  });
+  // Collide with moving plat
+  this.playerSprites.forEach(s=>{
+    if(!s.isDead)this.physics.collide(s,this.movingPlat);
+  });
+
+  // ---- BOT AI ----
+  this.playerSprites.forEach((s,i)=>{
+    if(!this.players[i] || !this.players[i].isBot || s.isDead)return;
+    const bot=this.players[i];
+    // Simple follow-leader bot
+    const target=this.playerSprites[0]||localSprite;
+    const dx=target.x - s.x;
+    if(Math.abs(dx)>20){
+      s.setVelocityX(dx>0?160:-160);
+      s.setFlipX(dx<0);
+    }else{s.setVelocityX(0)}
+    // Jump if blocked or target is higher
+    if(s.body.blocked.down && (s.body.blocked.right||s.body.blocked.left||(target.y<s.y-60))){
+      s.setVelocityY(-520);
+    }
+  });
+
+  // ---- PLAYER-PLAYER COLLISIONS (stacking) ----
+  for(let i=0;i<this.playerSprites.length;i++){
+    for(let j=i+1;j<this.playerSprites.length;j++){
+      if(!this.playerSprites[i].isDead&&!this.playerSprites[j].isDead){
+        this.physics.collide(this.playerSprites[i],this.playerSprites[j]);
+      }
+    }
+  }
+
+  // ---- KEY PICKUP ----
+  if(!this.hasKey && this.keyObj.active){
+    const lps=this.playerSprites[lp];
+    if(!lps.isDead && Phaser.Geom.Rectangle.Overlaps(
+      new Phaser.Geom.Rectangle(lps.x-16,lps.y-16,32,32),
+      new Phaser.Geom.Rectangle(this.keyObj.x-12,this.keyObj.y-12,24,24)
+    )){
+      this.hasKey=true;
+      this.keyObj.destroy();
+      this.keyText.destroy();
+      this.keyLabel.destroy();
+      showToast('🗝️ ¡LLAVE RECOGIDA!');
+      // Highlight door
+      this.doorLabel.setColor('#FFE66D').setText('¡VE A LA PUERTA!');
+      this.tweens.add({targets:this.doorText,scaleX:1.3,scaleY:1.3,duration:200,yoyo:true,repeat:3});
+    }
+  }
+
+  // ---- SWITCHES ----
+  this.switches.forEach(sw=>{
+    if(sw.isOn)return;
+    this.playerSprites.forEach(s=>{
+      if(s.isDead)return;
+      if(Phaser.Geom.Rectangle.Overlaps(
+        new Phaser.Geom.Rectangle(s.x-16,s.y+8,32,24),
+        new Phaser.Geom.Rectangle(sw.x-16,sw.y-8,32,16)
+      )){
+        sw.isOn=true;
+        sw.setTexture('switch_on');
+        sw.label.setText('✅');
+        sw.txt.setColor('#96CEB4');
+        this.switchesOn++;
+        showToast(`✅ INTERRUPTOR ${this.switchesOn}/${this.totalSwitches} ACTIVADO!`);
+        this.tweens.add({targets:sw,scaleX:1.3,scaleY:1.3,duration:150,yoyo:true});
+        if(this.switchesOn>=this.totalSwitches && this.hasKey){
+          this.openDoor();
+        }else if(this.switchesOn>=this.totalSwitches){
+          showToast('🚪 ¡INTERRUPTORES LISTOS! CONSIGUE LA LLAVE');
+        }
+      }
+    });
+  });
+
+  // ---- DOOR OPEN CHECK ----
+  if(!this.doorOpen && this.hasKey && this.switchesOn>=this.totalSwitches){
+    this.openDoor();
+  }
+
+  // ---- DOOR GOAL ----
+  if(this.doorOpen){
+    // All non-dead players must be at door
+    let allAtDoor=true;
+    this.playerSprites.forEach((s,i)=>{
+      if(s.isDead) return;
+      const atDoor=Phaser.Geom.Rectangle.Overlaps(
+        new Phaser.Geom.Rectangle(s.x-16,s.y-16,32,32),
+        new Phaser.Geom.Rectangle(this.door.x-24,this.door.y-32,48,64)
+      );
+      if(!atDoor) allAtDoor=false;
+    });
+    // Actually just need local player at door
+    const lps=this.playerSprites[lp];
+    if(!lps.isDead && Phaser.Geom.Rectangle.Overlaps(
+      new Phaser.Geom.Rectangle(lps.x-16,lps.y-16,32,32),
+      new Phaser.Geom.Rectangle(this.door.x-24,this.door.y-32,48,64)
+    )){
+      this.triggerLevelComplete();
+      if(roomChannel)roomChannel.postMessage({type:'level_complete'});
+    }
+  }
+
+  // ---- SPIKE DEATH ----
+  this.playerSprites.forEach((s,i)=>{
+    if(s.isDead)return;
+    // Fall death
+    if(s.y>this.worldH+50){
+      this.killPlayer(s,i);return;
+    }
+    // Spike death
+    this.spikes.getChildren().forEach(spike=>{
+      if(Phaser.Geom.Rectangle.Overlaps(
+        new Phaser.Geom.Rectangle(s.x-12,s.y-12,24,24),
+        new Phaser.Geom.Rectangle(spike.x-6,spike.y-4,12,8)
+      )){this.killPlayer(s,i)}
+    });
+  });
+
+  // ---- UPDATE VISUALS ----
+  this.playerSprites.forEach((s,i)=>{
+    const p=this.players[i];
+    if(!p)return;
+    // Name/hat follow
+    this.playerNames[i].setPosition(s.x,s.y-26);
+    this.playerHats[i].setPosition(s.x,s.y-38);
+    // Color tint based on player color
+    if(!s.isDead){
+      // Squash/stretch
+      if(!s.body.blocked.down){
+        s.setScale(0.9,1.1);
+      }else{
+        s.setScale(1,0.9);
+      }
+    }
+  });
+
+  // Apply remote player positions (interpolation)
+  Object.values(this.remotePlayers).forEach(rs=>{
+    const s=this.playerSprites[rs.playerIdx];
+    if(s && rs.playerIdx!==lp){
+      s.x+=(rs.x-s.x)*0.3;
+      s.y+=(rs.y-s.y)*0.3;
+    }
+  });
+
+  // ---- BROADCAST LOCAL STATE ----
+  this.syncTimer++;
+  if(this.syncTimer>3){
+    this.syncTimer=0;
+    broadcastGameState({
+      playerIdx:lp,
+      x:localSprite.x,
+      y:localSprite.y,
+      vx:localSprite.body.velocity.x,
+      vy:localSprite.body.velocity.y,
+      flipX:localSprite.flipX,
+      isDead:localSprite.isDead
+    });
+  }
+}
+
+// Kill player
+Phaser.Scene.prototype.killPlayer=function(sprite,idx){
+  if(sprite.isDead)return;
+  sprite.isDead=true;
+  const p=this.players[idx];
+  this.deaths[p.id]=(this.deaths[p.id]||0)+1;
+  if(idx===this.localPlayerIdx){
+    localState.stats.deaths++;
+    saveProfile();
+    if(roomChannel)roomChannel.postMessage({type:'player_died',playerId:p.id});
+  }
+  updateHUD();
+
+  // Death animation
+  sprite.setAlpha(0);
+  const deadEmoji=this.add.text(sprite.x,sprite.y,'💥',{fontSize:'28px'}).setOrigin(0.5);
+  this.tweens.add({targets:deadEmoji,y:sprite.y-60,alpha:0,duration:800,onComplete:()=>deadEmoji.destroy()});
+
+  // Respawn after delay
+  this.time.delayedCall(1800,()=>{
+    sprite.isDead=false;
+    sprite.setAlpha(1);
+    sprite.setVelocity(0,0);
+    sprite.x=60+idx*40;
+    sprite.y=720;
+    sprite.setScale(1);
+    showToast(`😿 ${p.username} respawneó`);
+  });
+};
+
+Phaser.Scene.prototype.openDoor=function(){
+  this.doorOpen=true;
+  this.door.setTexture('door_open');
+  this.doorText.setText('🚪✨');
+  this.doorLabel.setColor('#4ECDC4').setText('¡ENTRA!');
+  showToast('🚪 ¡LA PUERTA ESTÁ ABIERTA! ¡CORRE!');
+  this.tweens.add({targets:this.door,scaleX:1.8,scaleY:1.8,duration:300,yoyo:true});
+};
+
+Phaser.Scene.prototype.triggerLevelComplete=function(){
+  if(this.levelComplete)return;
+  this.levelComplete=true;
+  if(gameTimerInterval)clearInterval(gameTimerInterval);
+
+  // Celebration
+  localState.stats.wins++;
+  localState.stats.played++;
+  saveProfile();
+
+  this.time.delayedCall(1200,()=>showResults(this));
+};
+
+function showResults(scene){
+  if(phaserGame){phaserGame.destroy(true);phaserGame=null}
+  document.getElementById('game-container').style.display='none';
+  document.getElementById('hud').style.display='none';
+
+  const m=Math.floor(gameTimer/60);
+  const s=gameTimer%60;
+  document.getElementById('result-time').textContent=`${m}:${s.toString().padStart(2,'0')}`;
+  document.getElementById('result-attempts').textContent=gameAttempts;
+
+  // Stars
+  let stars='⭐';
+  if(gameTimer<120)stars='⭐⭐⭐';
+  else if(gameTimer<240)stars='⭐⭐';
+  document.getElementById('result-stars').textContent=stars;
+
+  const rows=document.getElementById('result-rows');
+  rows.innerHTML='';
+  const rooms=getRooms();
+  const room=localState.roomId?rooms[localState.roomId]:roomState;
+  const players=room?room.players:[makePlayerObj()];
+  let worstPlayer=null,worstDeaths=0;
+  players.forEach(p=>{
+    const d=scene&&scene.deaths?scene.deaths[p.id]||0:0;
+    if(d>worstDeaths){worstDeaths=d;worstPlayer=p}
+    const row=document.createElement('div');
+    row.className='result-row';
+    const hat=HATS.find(h=>h.id===p.hat)?.icon||'';
+    row.innerHTML=`
+      <span style="color:${p.color}">${hat} ${p.username}</span>
+      <span class="result-val bad">💀 ${d} muertes</span>
+    `;
+    rows.appendChild(row);
+  });
+  document.getElementById('result-worst').textContent=worstPlayer?worstPlayer.username+' ('+worstDeaths+'💀)':'Nadie';
+
+  showScreen('result-screen');
+}
+
+// ==================== EVENT LISTENERS ====================
+document.getElementById('btn-login').onclick=()=>{
+  const u=document.getElementById('login-user').value.trim();
+  const p=document.getElementById('login-pass').value;
+  if(login(u,p)){
+    showScreen('main-menu');
+    document.getElementById('welcome-msg').textContent='¡BIENVENIDO, '+u.toUpperCase()+'! 🐱';
+    showToast('✅ Sesión iniciada como '+u);
+  }else{
+    showToast('❌ Usuario o contraseña incorrectos');
+    document.getElementById('login-screen').querySelector('.lobby-box').style.animation='shake 0.3s ease';
+    setTimeout(()=>document.getElementById('login-screen').querySelector('.lobby-box').style.animation='',300);
+  }
+};
+
+document.getElementById('btn-register-show').onclick=()=>{
+  const u=document.getElementById('login-user').value.trim();
+  const p=document.getElementById('login-pass').value;
+  const err=register(u,p);
+  if(err){showToast('❌ '+err);return}
+  showToast('✅ Cuenta creada! Iniciando sesión...');
+  setTimeout(()=>{
+    if(login(u,p)){
+      showScreen('main-menu');
+      document.getElementById('welcome-msg').textContent='¡BIENVENIDO, '+u.toUpperCase()+'! 🐱';
+    }
+  },800);
+};
+
+['login-user','login-pass'].forEach(id=>{
+  document.getElementById(id).addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('btn-login').click()});
+});
+
+document.getElementById('btn-create-room').onclick=()=>{
+  const code=createRoom();
+  document.getElementById('lobby-join-row').style.display='none';
+  document.getElementById('btn-start-game').style.display='block';
+  showScreen('room-lobby');
+  updateLobbyUI();
+  showToast('🏠 Sala creada: '+code);
+};
+
+document.getElementById('btn-join-room').onclick=()=>{
+  document.getElementById('lobby-join-row').style.display='block';
+  document.getElementById('btn-start-game').style.display='none';
+  showScreen('room-lobby');
+  document.getElementById('lobby-code').textContent='----';
+};
+
+document.getElementById('btn-do-join').onclick=()=>{
+  const code=document.getElementById('room-code-input').value.toUpperCase().trim();
+  if(!code){showToast('Ingresa un código');return}
+  const err=joinRoom(code);
+  if(err){showToast('❌ '+err);return}
+  document.getElementById('lobby-join-row').style.display='none';
+  updateLobbyUI();
+  broadcastRoomUpdate();
+  showToast('✅ ¡Unido a sala '+code+'!');
+};
+
+document.getElementById('room-code-input').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('btn-do-join').click()});
+
+document.getElementById('btn-solo').onclick=()=>{
+  // Create solo room with bots
+  const code=createRoom();
+  addBot(code);
+  addBot(code);
+  showToast('⚡ Modo solo con bots activado!');
+  setTimeout(()=>{
+    broadcastGameStart();
+    startGame();
+  },500);
+};
+
+document.getElementById('btn-start-game').onclick=()=>{
+  if(!localState.isHost){showToast('Solo el host puede iniciar');return}
+  const rooms=getRooms();
+  const room=rooms[localState.roomId];
+  if(!room||room.players.length<1){showToast('Necesitas al menos 1 jugador');return}
+  broadcastGameStart();
+  startGame();
+};
+
+document.getElementById('btn-add-bot').onclick=()=>{
+  if(!localState.roomId)return;
+  addBot(localState.roomId);
+  broadcastRoomUpdate();
+  showToast('🤖 Bot agregado!');
+};
+
+document.getElementById('btn-leave-room').onclick=()=>{
+  if(localState.roomId){
+    const rooms=getRooms();
+    if(rooms[localState.roomId]){
+      rooms[localState.roomId].players=rooms[localState.roomId].players.filter(p=>p.id!==localState.playerId);
+      saveRooms(rooms);
+      broadcastRoomUpdate();
+    }
+    localState.roomId=null;
+    localState.isHost=false;
+  }
+  if(roomChannel){roomChannel.close();roomChannel=null}
+  showScreen('main-menu');
+};
+
+document.getElementById('btn-cosmetics').onclick=()=>{
+  buildHatGrid();
+  document.getElementById('cosmetic-name').value=localState.username;
+  document.getElementById('preview-hat').textContent=HATS.find(h=>h.id===localState.hat)?.icon||'';
+  showScreen('cosmetics-screen');
+};
+
+document.getElementById('cosmetic-name').oninput=e=>{
+  document.getElementById('preview-name').textContent=e.target.value||'GATITO';
+};
+
+document.getElementById('btn-save-cosm').onclick=()=>{
+  const newName=document.getElementById('cosmetic-name').value.trim();
+  if(newName && newName.length>=2) localState.username=newName;
+  saveProfile();
+  showToast('✅ ¡Guardado!');
+  showScreen('main-menu');
+};
+
+document.getElementById('btn-back-cosm').onclick=()=>showScreen('main-menu');
+
+document.getElementById('btn-stats').onclick=()=>{
+  const s=localState.stats;
+  showToast(`📊 Partidas:${s.played} Muertes:${s.deaths} Victorias:${s.wins}`,4000);
+};
+
+document.getElementById('btn-play-again').onclick=()=>{
+  showScreen(null);
+  document.getElementById('result-screen').style.display='none';
+  gameAttempts=0;
+  startGame();
+};
+
+document.getElementById('btn-menu-result').onclick=()=>{
+  if(phaserGame){phaserGame.destroy(true);phaserGame=null}
+  document.getElementById('game-container').style.display='none';
+  document.getElementById('hud').style.display='none';
+  if(gameTimerInterval)clearInterval(gameTimerInterval);
+  // Clean up room
+  if(localState.roomId){
+    const rooms=getRooms();
+    delete rooms[localState.roomId];
+    saveRooms(rooms);
+    localState.roomId=null;
+  }
+  showScreen('main-menu');
+};
+
+// ---- Periodic room refresh ----
+setInterval(()=>{
+  if(localState.roomId && document.getElementById('room-lobby').style.display!=='none'){
+    const rooms=getRooms();
+    if(rooms[localState.roomId]){
+      roomState=rooms[localState.roomId];
+      updateLobbyUI();
+    }
+  }
+},1000);
+
+// Clean old rooms
+setInterval(()=>{
+  const rooms=getRooms();
+  const now=Date.now();
+  Object.keys(rooms).forEach(k=>{
+    if(now-rooms[k].lastPing > 300000)delete rooms[k];
+  });
+  saveRooms(rooms);
+},60000);
+
+// Init
+showScreen('login-screen');
+</script>
+</body>
+</html>
